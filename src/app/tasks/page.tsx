@@ -22,6 +22,7 @@ export default function TasksPage() {
   const [weddingDetails, setWeddingDetails] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [aiModalTask, setAIModalTask] = useState<Task | null>(null);
 
   useEffect(() => {
     async function fetchWedding() {
@@ -57,6 +58,16 @@ export default function TasksPage() {
     );
   };
 
+  const handleDeleteTask = (taskId: string) => {
+    setTasks(prevTasks => prevTasks.filter(task => task.id !== taskId));
+  };
+
+  const handleAIHelp = (task: Task) => {
+    setAIModalTask(task);
+  };
+
+  const closeAIModal = () => setAIModalTask(null);
+
   return (
     <div className="space-y-6">
       {loading && <div className="text-gray-500">Loading wedding details...</div>}
@@ -78,8 +89,30 @@ export default function TasksPage() {
         <h2 className="text-[#181511] text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 pb-3 pt-5">
           Tasks ({completedTasks}/{tasks.length} completed)
         </h2>
-        <TaskList tasks={tasks} onTaskToggle={handleTaskToggle} />
+        <TaskList
+          tasks={tasks}
+          onTaskToggle={handleTaskToggle}
+          onDelete={handleDeleteTask}
+          onAIHelp={handleAIHelp}
+        />
       </div>
+      {/* AI Help Modal */}
+      {aiModalTask && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="bg-white rounded-xl shadow-2xl p-8 max-w-lg w-full relative">
+            <button
+              onClick={closeAIModal}
+              className="absolute top-3 right-3 text-gray-400 hover:text-gray-700 text-2xl font-bold"
+              aria-label="Close"
+            >
+              ×
+            </button>
+            <h3 className="text-xl font-bold mb-2">AI Help for: {aiModalTask.title}</h3>
+            <p className="mb-4 text-gray-700">(AI insights and suggestions will appear here.)</p>
+            {/* TODO: Add AI insights here */}
+          </div>
+        </div>
+      )}
     </div>
   );
 } 
