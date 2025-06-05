@@ -1,33 +1,39 @@
 "use client";
 
-import { useState } from "react";
-import { CheckSquare, Globe, Settings } from "lucide-react";
-import { cn } from "@/lib/utils";
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { CheckSquare, Globe, Settings, MessageSquare } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-interface SidebarProps {
-  activeTab: string;
-  onTabChange: (tab: string) => void;
-}
+const navItems = [
+  {
+    id: 'chat',
+    label: 'Chat Assistant',
+    icon: MessageSquare,
+    href: '/chat',
+  },
+  {
+    id: 'tasks',
+    label: 'Tasks',
+    icon: CheckSquare,
+    href: '/tasks',
+  },
+  {
+    id: 'website',
+    label: 'Website',
+    icon: Globe,
+    href: '/website',
+  },
+  {
+    id: 'settings',
+    label: 'Settings',
+    icon: Settings,
+    href: '/settings',
+  },
+];
 
-export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
-  const navItems = [
-    {
-      id: "tasks",
-      label: "Tasks",
-      icon: CheckSquare,
-    },
-    {
-      id: "website",
-      label: "Website",
-      icon: Globe,
-    },
-    {
-      id: "settings",
-      label: "Settings",
-      icon: Settings,
-    },
-  ];
-
+export function Sidebar() {
+  const pathname = usePathname();
   return (
     <div className="w-80 min-h-screen bg-white">
       <div className="flex h-full flex-col justify-between p-4">
@@ -38,24 +44,23 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
           <div className="flex flex-col gap-2">
             {navItems.map((item) => {
               const Icon = item.icon;
-              const isActive = activeTab === item.id;
-              
+              const isActive = pathname === item.href;
               return (
-                <button
+                <Link
                   key={item.id}
-                  onClick={() => onTabChange(item.id)}
+                  href={item.href}
                   className={cn(
-                    "flex items-center gap-3 px-3 py-2 rounded-xl transition-colors",
+                    'flex items-center gap-3 px-3 py-2 rounded-xl transition-colors',
                     isActive
-                      ? "bg-[#f4f3f0] text-[#181511]"
-                      : "text-[#887863] hover:bg-[#f9f8f6] hover:text-[#181511]"
+                      ? 'bg-[#f4f3f0] text-[#181511]'
+                      : 'text-[#887863] hover:bg-[#f9f8f6] hover:text-[#181511]'
                   )}
                 >
                   <Icon size={24} />
                   <p className="text-sm font-medium leading-normal">
                     {item.label}
                   </p>
-                </button>
+                </Link>
               );
             })}
           </div>
