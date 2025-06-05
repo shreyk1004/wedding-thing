@@ -8,6 +8,18 @@ const STARTER_MESSAGE: ChatMessage = {
   content: "Hi there! Congratulations on your upcoming wedding 🎉. To get started, could you tell me the date of your wedding?",
 };
 
+const REQUIRED_FIELDS = [
+  'partner1Name',
+  'partner2Name',
+  'weddingDate',
+  'city',
+  'theme',
+  'estimatedGuestCount',
+  'contactEmail',
+  'phone',
+  'budget',
+];
+
 export function WeddingChat() {
   const [messages, setMessages] = useState<ChatMessage[]>([STARTER_MESSAGE]);
   const [input, setInput] = useState('');
@@ -17,7 +29,9 @@ export function WeddingChat() {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [hasSaved, setHasSaved] = useState(false);
+  const [missingFields, setMissingFields] = useState<string[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -28,6 +42,17 @@ export function WeddingChat() {
       return () => clearTimeout(timeout);
     }
   }, [saveSuccess, router]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  // Focus input after sending, unless loading
+  useEffect(() => {
+    if (!isLoading && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [isLoading, messages]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInput(e.target.value);
@@ -47,12 +72,46 @@ export function WeddingChat() {
         body: JSON.stringify({ messages: [...messages, userMessage] }),
       });
       const data = await res.json();
+      if (data.functionCall && data.details) {
+        // Model has called the function with structured details
+        setMessages(prev => [...prev, { role: 'assistant', content: 'Thank you! All your details have been collected.' }]);
+        setIsComplete(true);
+        setMissingFields([]);
+        setIsLoading(false);
+        if (!hasSaved) {
+          setIsSaving(true);
+          setSaveError(null);
+          try {
+            const saveRes = await fetch('/api/wedding', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(data.details),
+            });
+            if (saveRes.ok) {
+              setSaveSuccess(true);
+              setHasSaved(true);
+              localStorage.setItem('weddingDetails', JSON.stringify(data.details));
+            } else {
+              const err = await saveRes.text();
+              setSaveError(err || 'Failed to save details.');
+            }
+          } catch (err: any) {
+            setSaveError('Failed to save details.');
+          } finally {
+            setIsSaving(false);
+          }
+        }
+        return;
+      }
+      // Otherwise, show the assistant's reply as before
       const assistantMessage: ChatMessage = { role: 'assistant', content: data.reply };
       setMessages(prev => [...prev, assistantMessage]);
-      // Check for completion
+      // Extraction for debug only
       const details = extractWeddingDetails([...messages, userMessage, assistantMessage]);
-      const requiredFields = ['partner1Name', 'partner2Name', 'weddingDate', 'city', 'theme', 'estimatedGuestCount', 'contactEmail', 'phone', 'budget'];
-      const isAllFieldsComplete = requiredFields.every(field => field in details);
+      console.log('Extracted details:', details);
+      const missingFields = REQUIRED_FIELDS.filter(field => !(field in details));
+      setMissingFields(missingFields);
+      const isAllFieldsComplete = missingFields.length === 0;
       setIsComplete(isAllFieldsComplete);
       if (isAllFieldsComplete && !hasSaved) {
         setIsSaving(true);
@@ -82,14 +141,6 @@ export function WeddingChat() {
       setIsLoading(false);
     }
   };
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
 
   return (
     <div className="flex flex-col h-[600px] w-full max-w-2xl mx-auto bg-[#f4f6fb] rounded-2xl shadow-2xl border border-[#e0e7ef] overflow-hidden">
@@ -130,11 +181,17 @@ export function WeddingChat() {
           {isSaving && <p className="text-blue-700 mt-2">Saving your details...</p>}
           {saveSuccess && <p className="text-green-800 mt-2">Your details have been saved!</p>}
           {saveError && <p className="text-red-700 mt-2">{saveError}</p>}
+          {missingFields.length > 0 && (
+            <div className="p-2 bg-yellow-100 text-yellow-900 text-sm rounded mt-2">
+              Debug: Missing fields: {missingFields.join(', ')}
+            </div>
+          )}
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="p-4 bg-white border-t border-[#e0e7ef]">
           <div className="flex gap-3">
             <input
+              ref={inputRef}
               value={input}
               onChange={handleInputChange}
               placeholder="Type your message..."
