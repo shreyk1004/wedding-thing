@@ -1,6 +1,12 @@
 import './globals.css';
 import { Sidebar } from '@/components/sidebar';
 import type { ReactNode } from 'react';
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Weddy - AI Wedding Planning Tool",
+  description: "A modern, elegant wedding planning tool to help you organize your perfect day.",
+};
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (

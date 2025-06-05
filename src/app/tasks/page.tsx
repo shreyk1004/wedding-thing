@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { WeddingHeader } from '@/components/wedding-header';
 import { TaskList } from '@/components/task-list';
-import { Task } from '@/types';
+import { Task, WeddingInfo } from '@/types';
 
 const initialTasks: Task[] = [
   { id: '1', title: 'Book venue', status: 'todo', description: 'Find and reserve the perfect venue' },
@@ -16,7 +16,7 @@ const initialTasks: Task[] = [
   { id: '8', title: 'Buy wedding dress', status: 'done', description: 'Find and purchase the perfect dress' },
 ];
 
-const weddingInfo = {
+const weddingInfo: WeddingInfo = {
   bride: 'Sarah',
   groom: 'Alex',
   date: '2024-10-12',
