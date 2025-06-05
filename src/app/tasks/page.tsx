@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { WeddingHeader } from '@/components/wedding-header';
 import { TaskList } from '@/components/task-list';
 import { Task } from '@/types';
@@ -25,6 +25,16 @@ const weddingInfo = {
 
 export default function TasksPage() {
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
+  const [weddingDetails, setWeddingDetails] = useState<any>(null);
+
+  useEffect(() => {
+    // Read from localStorage if available
+    const details = localStorage.getItem('weddingDetails');
+    if (details) {
+      setWeddingDetails(JSON.parse(details));
+    }
+  }, []);
+
   const completedTasks = tasks.filter(task => task.status === 'done').length;
   const completionPercentage = (completedTasks / tasks.length) * 100;
 
@@ -41,6 +51,12 @@ export default function TasksPage() {
   return (
     <div className="space-y-6">
       <WeddingHeader weddingInfo={weddingInfo} completionPercentage={completionPercentage} />
+      {weddingDetails && (
+        <div className="bg-gray-100 rounded p-4 mb-4">
+          <h3 className="font-bold mb-2">Extracted Wedding Details</h3>
+          <pre className="text-xs whitespace-pre-wrap">{JSON.stringify(weddingDetails, null, 2)}</pre>
+        </div>
+      )}
       <div>
         <h2 className="text-[#181511] text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 pb-3 pt-5">
           Tasks ({completedTasks}/{tasks.length} completed)
