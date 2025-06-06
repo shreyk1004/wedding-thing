@@ -1,5 +1,5 @@
 import { weddingDetailsSchema } from '@/types/wedding';
-import { supabase } from '@/lib/supabase';
+import { getSupabaseClient } from '@/lib/supabase';
 
 export async function POST(req: Request) {
   try {
@@ -13,7 +13,8 @@ export async function POST(req: Request) {
     const lowercasedData = Object.fromEntries(
       Object.entries(parsed.data).map(([k, v]) => [k.toLowerCase(), v])
     );
-    // Save to Supabase
+    // Save to Supabase using admin client to bypass RLS
+    const supabase = getSupabaseClient(true);
     const { error } = await supabase
       .from('weddings')
       .insert([lowercasedData]);
