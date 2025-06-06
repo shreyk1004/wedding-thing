@@ -3,9 +3,10 @@
 import { useState, useEffect } from 'react';
 import { WeddingHeader } from '@/components/wedding-header';
 import { TaskList } from '@/components/task-list';
-import { Task } from '@/types';
 import { supabase, handleSupabaseQuery } from '@/lib/supabase';
 import { useChatContext } from '@/components/chat-provider';
+import { TaskAIHelpModal } from '@/components/task-ai-help-modal';
+import { Task, WeddingInfo } from '@/types';
 
 const initialTasks: Task[] = [
   { id: '1', title: 'Book venue', status: 'todo', description: 'Find and reserve the perfect venue' },
@@ -18,6 +19,13 @@ const initialTasks: Task[] = [
   { id: '8', title: 'Buy wedding dress', status: 'done', description: 'Find and purchase the perfect dress' },
 ];
 
+
+const weddingInfo: WeddingInfo = {
+  bride: 'Sarah',
+  groom: 'Alex',
+  date: '2024-10-12',
+  venue: 'Garden Rose Manor',
+};
 export default function TasksPage() {
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
   const [weddingDetails, setWeddingDetails] = useState<any>(null);
