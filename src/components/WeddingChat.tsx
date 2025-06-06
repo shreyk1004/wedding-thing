@@ -71,7 +71,14 @@ export function WeddingChat() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ messages: [...messages, userMessage] }),
       });
+      
+      if (!res.ok) {
+        console.error('API response not ok:', res.status, res.statusText);
+        throw new Error(`API request failed: ${res.status}`);
+      }
+      
       const data = await res.json();
+      console.log('API response data:', data);
       if (data.functionCall && data.details) {
         // Model has called the function with structured details
         setMessages(prev => [...prev, { role: 'assistant', content: 'Thank you! All your details have been collected.' }]);
@@ -136,6 +143,7 @@ export function WeddingChat() {
         }
       }
     } catch (err) {
+      console.error('Chat error:', err);
       setMessages(prev => [...prev, { role: 'assistant', content: 'Sorry, there was an error. Please try again.' }]);
     } finally {
       setIsLoading(false);

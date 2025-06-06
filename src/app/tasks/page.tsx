@@ -3,8 +3,10 @@
 import { useState, useEffect } from 'react';
 import { WeddingHeader } from '@/components/wedding-header';
 import { TaskList } from '@/components/task-list';
+import { supabase, handleSupabaseQuery } from '@/lib/supabase';
+import { useChatContext } from '@/components/chat-provider';
+import { TaskAIHelpModal } from '@/components/task-ai-help-modal';
 import { Task, WeddingInfo } from '@/types';
-import { supabase } from '@/lib/supabase';
 
 const initialTasks: Task[] = [
   { id: '1', title: 'Book venue', status: 'todo', description: 'Find and reserve the perfect venue' },
@@ -29,24 +31,47 @@ export default function TasksPage() {
   const [weddingDetails, setWeddingDetails] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { openChat } = useChatContext();
 
   useEffect(() => {
     async function fetchWedding() {
       setLoading(true);
       setError(null);
-      const { data, error } = await supabase
-        .from('weddings')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
-      if (error) {
-        setError('Failed to fetch wedding details');
+      try {
+        console.log('Fetching wedding data from Supabase...');
+        
+        const { data, error } = await handleSupabaseQuery(
+          async () => await supabase
+            .from('weddings')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(1),
+          [] // Fallback to empty array if RLS blocks
+        );
+        
+        console.log('Supabase query result - data:', data, 'error:', error);
+        
+        if (error) {
+          console.error('Supabase error:', error);
+          setError('Failed to fetch wedding details. Please ensure you are signed in.');
+          setWeddingDetails(null);
+        } else {
+          // Handle array response - take the first item if exists
+          const wedding = data && data.length > 0 ? data[0] : null;
+          console.log('Processed wedding details:', wedding);
+          setWeddingDetails(wedding);
+          
+          if (!wedding) {
+            setError('No wedding details found. Please complete the wedding setup first or sign in to view your data.');
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching wedding details:', err);
+        setError('Failed to fetch wedding details. Please check your authentication.');
         setWeddingDetails(null);
-      } else {
-        setWeddingDetails(data);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }
     fetchWedding();
   }, []);
@@ -64,29 +89,96 @@ export default function TasksPage() {
     );
   };
 
+  const handleDeleteTask = (taskId: string) => {
+    setTasks(prevTasks => prevTasks.filter(task => task.id !== taskId));
+  };
+
+  const handleAIHelp = (task: Task) => {
+    console.log('AI Help clicked for task:', task.title);
+    openChat(task);
+  };
+
+  // Map Supabase fields to WeddingHeader fields
+  const weddingInfo = weddingDetails ? {
+    bride: weddingDetails.partner1name || 'Partner 1',
+    groom: weddingDetails.partner2name || 'Partner 2',
+    date: weddingDetails.weddingdate || new Date().toISOString().split('T')[0],
+    venue: weddingDetails.city || 'Venue',
+    theme: weddingDetails.theme || 'Not specified'
+  } : null;
+
   return (
-    <div className="space-y-6">
-      {loading && <div className="text-gray-500">Loading wedding details...</div>}
-      {error && <div className="text-red-600">{error}</div>}
-      {weddingDetails && (
-        <>
-          <WeddingHeader
-            weddingInfo={{
-              bride: weddingDetails.partner1name || '',
-              groom: weddingDetails.partner2name || '',
-              date: weddingDetails.weddingdate || '',
-              venue: weddingDetails.city || '',
-            }}
-            completionPercentage={completionPercentage}
+    <div className="relative min-h-screen">
+      <div className="space-y-6">
+        {loading && <div className="text-gray-500">Loading wedding details...</div>}
+        
+        {error && (
+          <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <p className="text-yellow-800">{error}</p>
+            {error.includes('No wedding details found') && (
+              <p className="text-yellow-600 text-sm mt-1">
+                Visit the <a href="/chat" className="underline">wedding setup chat</a> to add your details.
+              </p>
+            )}
+          </div>
+        )}
+        {weddingInfo && (
+          <>
+            <WeddingHeader
+              weddingInfo={weddingInfo}
+              completionPercentage={completionPercentage}
+            />
+            <div className="px-4 py-6 bg-white rounded-xl shadow-sm border border-gray-200">
+              <h3 className="text-lg font-semibold text-[#181511] mb-4">Wedding Details</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <p className="text-sm text-gray-600">Theme</p>
+                  <p className="font-medium text-[#181511]">{weddingDetails.theme || 'Not specified'}</p>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm text-gray-600">Guest Count</p>
+                  <p className="font-medium text-[#181511]">{weddingDetails.estimatedguestcount || 'Not specified'} guests</p>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm text-gray-600">Budget</p>
+                  <p className="font-medium text-[#181511]">
+                    {weddingDetails.budget ? `$${weddingDetails.budget.toLocaleString()}` : 'Not specified'}
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm text-gray-600">Special Requirements</p>
+                  <p className="font-medium text-[#181511]">
+                    {weddingDetails.specialrequirements?.length 
+                      ? weddingDetails.specialrequirements.join(', ')
+                      : 'None specified'}
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm text-gray-600">Contact Email</p>
+                  <p className="font-medium text-[#181511]">{weddingDetails.contactemail || 'Not specified'}</p>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm text-gray-600">Phone</p>
+                  <p className="font-medium text-[#181511]">{weddingDetails.phone || 'Not specified'}</p>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+        <div>
+          <h2 className="text-[#181511] text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 pb-3 pt-5">
+            Tasks ({completedTasks}/{tasks.length} completed)
+          </h2>
+          <TaskList
+            tasks={tasks}
+            onTaskToggle={handleTaskToggle}
+            onDelete={handleDeleteTask}
+            onAIHelp={handleAIHelp}
           />
-        </>
-      )}
-      <div>
-        <h2 className="text-[#181511] text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 pb-3 pt-5">
-          Tasks ({completedTasks}/{tasks.length} completed)
-        </h2>
-        <TaskList tasks={tasks} onTaskToggle={handleTaskToggle} />
+        </div>
       </div>
+      
+
     </div>
   );
 } 
