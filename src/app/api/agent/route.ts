@@ -1,29 +1,43 @@
 import OpenAI from 'openai';
 import { getSupabaseClient } from '@/lib/supabase';
+import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
+import { cookies } from 'next/headers';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
 export async function POST(req: Request) {
   const { task, extraInfo, messages } = await req.json();
 
+  // Get the authenticated user
+  const supabase = createServerComponentClient({ cookies });
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return new Response(
+      JSON.stringify({ reply: 'Please log in to access AI assistance.' }),
+      { status: 401, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
   // Build context for classification
   const userText = (messages && messages.length > 0 && messages[messages.length - 1]?.content) || '';
   const intentText = userText || `${task?.title || ''} ${task?.description || ''}`;
   
-  // Fetch latest wedding details
-  const supabase = getSupabaseClient(true);
-  const { data: weddingRows, error: weddingError } = await supabase
+  // Fetch wedding details for this specific user
+  const supabaseAdmin = getSupabaseClient(true);
+  const { data: weddingRows, error: weddingError } = await supabaseAdmin
     .from('weddings')
     .select('*')
+    .eq('user_id', user.id)
     .order('created_at', { ascending: false })
     .limit(1);
   
-  console.log('Wedding rows:', weddingRows, 'Error:', weddingError);
+  console.log('Wedding rows for user:', weddingRows, 'Error:', weddingError);
   
   const latestWeddingDetails = weddingRows && weddingRows.length > 0 ? weddingRows[0] : null;
   if (!latestWeddingDetails) {
     return new Response(
-      JSON.stringify({ reply: 'No wedding details found. Please enter your wedding details first!' }),
+      JSON.stringify({ reply: 'No wedding details found for your account. Please complete the wedding setup first.' }),
       { headers: { 'Content-Type': 'application/json' } }
     );
   }

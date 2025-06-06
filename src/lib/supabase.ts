@@ -1,10 +1,18 @@
 import { createClient } from '@supabase/supabase-js';
+import { createBrowserClient } from '@supabase/auth-helpers-nextjs';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-// Client-side Supabase client (for browser usage)
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Client-side Supabase client configured for proper session handling
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true,
+    flowType: 'pkce'
+  }
+});
 
 // Server-side Supabase client with service role key for API routes
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
