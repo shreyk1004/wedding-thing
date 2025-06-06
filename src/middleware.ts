@@ -13,18 +13,6 @@ export async function middleware(req: NextRequest) {
   // and we're using anon key with disabled authentication
   if (req.nextUrl.pathname.startsWith('/api/')) {
     return res;
-  // Define API routes that don't require authentication
-  const publicApiRoutes = ['/api/task-help', '/api/chat', '/api/wedding', '/api/agent'];
-  const isPublicApiRoute = publicApiRoutes.some(route => 
-    req.nextUrl.pathname.startsWith(route)
-  );
-
-  // If accessing API routes without authentication (except public routes)
-  if (req.nextUrl.pathname.startsWith('/api/') && !session && !isPublicApiRoute) {
-    return new NextResponse(
-      JSON.stringify({ error: 'Authentication required' }),
-      { status: 401, headers: { 'Content-Type': 'application/json' } }
-    );
   }
 
   return res;
