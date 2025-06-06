@@ -1,393 +1,296 @@
 "use client";
 
 import { useState } from "react";
-import { Globe, Upload, Shuffle, Palette, Image, Calendar, MapPin, User } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/lib/supabaseClient";
 
 interface WebsiteFormData {
   bride: string;
   groom: string;
   date: string;
   venue: string;
-  photos: File[];
-  colorPalette: string;
-  customColors: {
-    primary: string;
-    secondary: string;
-    accent: string;
-  };
+  photos: string[];
+  colorPalette: number;
   style: string;
+  weddingId?: string;
 }
 
 const colorPalettes = [
-  {
-    id: "romantic",
-    name: "Romantic Rose",
-    colors: { primary: "#e89830", secondary: "#f4d6a7", accent: "#8b4513" },
-    preview: ["#e89830", "#f4d6a7", "#8b4513"]
-  },
-  {
-    id: "elegant",
-    name: "Elegant Navy",
-    colors: { primary: "#2c3e50", secondary: "#ecf0f1", accent: "#f39c12" },
-    preview: ["#2c3e50", "#ecf0f1", "#f39c12"]
-  },
-  {
-    id: "vintage",
-    name: "Vintage Sage",
-    colors: { primary: "#8fbc8f", secondary: "#f5f5dc", accent: "#daa520" },
-    preview: ["#8fbc8f", "#f5f5dc", "#daa520"]
-  },
-  {
-    id: "modern",
-    name: "Modern Blush",
-    colors: { primary: "#ffc0cb", secondary: "#696969", accent: "#ff69b4" },
-    preview: ["#ffc0cb", "#696969", "#ff69b4"]
-  },
-  {
-    id: "classic",
-    name: "Classic Gold",
-    colors: { primary: "#ffd700", secondary: "#fffaf0", accent: "#8b4513" },
-    preview: ["#ffd700", "#fffaf0", "#8b4513"]
-  },
-  {
-    id: "boho",
-    name: "Boho Earth",
-    colors: { primary: "#cd853f", secondary: "#f4a460", accent: "#2e8b57" },
-    preview: ["#cd853f", "#f4a460", "#2e8b57"]
-  }
+  "#ffffff", // White
+  "#f5f5f5", // Light gray
+  "#e0e0e0", // Medium light gray
+  "#d0d0d0", // Medium gray
+  "#b0b0b0", // Darker gray
+  "#a0a0a0", // Even darker gray
+  "#808080", // Dark gray
+  "#606060"  // Very dark gray
 ];
 
 const styleOptions = [
-  { id: "classy", name: "Classy", description: "Elegant serif fonts, traditional layouts" },
-  { id: "fun", name: "Fun", description: "Playful fonts, colorful and vibrant" },
-  { id: "modern", name: "Modern", description: "Clean lines, minimalist design" },
-  { id: "romantic", name: "Romantic", description: "Script fonts, soft curves" },
-  { id: "rustic", name: "Rustic", description: "Natural textures, handwritten style" },
-  { id: "vintage", name: "Vintage", description: "Retro elements, classic typography" }
+  { id: "elegant", name: "Elegant", preview: "/elegant-preview.jpg" },
+  { id: "modern", name: "Modern", preview: "/modern-preview.jpg" },
+  { id: "rustic", name: "Rustic", preview: "/rustic-preview.jpg" }
 ];
 
 export function WebsiteTab() {
   const [formData, setFormData] = useState<WebsiteFormData>({
-    bride: "Sarah", // Will inherit from Supabase
-    groom: "Alex", // Will inherit from Supabase
-    date: "2024-10-12", // Will inherit from Supabase
-    venue: "Garden Rose Manor", // Will inherit from Supabase
+    bride: "",
+    groom: "",
+    date: "",
+    venue: "",
     photos: [],
-    colorPalette: "",
-    customColors: { primary: "#e89830", secondary: "#f4d6a7", accent: "#8b4513" },
-    style: ""
+    colorPalette: 0,
+    style: "elegant",
+    weddingId: undefined
   });
+  const [showPreview, setShowPreview] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   const handleInputChange = (field: keyof WebsiteFormData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleColorPaletteSelect = (palette: typeof colorPalettes[0]) => {
-    setFormData(prev => ({
-      ...prev,
-      colorPalette: palette.id,
-      customColors: palette.colors
-    }));
-  };
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || !formData.weddingId) {
+      setUploadError('Please ensure you have created a wedding entry first.');
+      return;
+    }
 
-  const handleCustomColorChange = (colorType: keyof typeof formData.customColors, color: string) => {
-    setFormData(prev => ({
-      ...prev,
-      colorPalette: "custom",
-      customColors: { ...prev.customColors, [colorType]: color }
-    }));
-  };
+    const files = Array.from(e.target.files);
+    const urls: string[] = [];
+    setUploadError(null);
+    setIsUploading(true);
 
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const files = Array.from(e.target.files);
-      setFormData(prev => ({ ...prev, photos: [...prev.photos, ...files] }));
+    try {
+      for (const file of files) {
+        // Create a unique filename to avoid collisions
+        const timestamp = new Date().getTime();
+        const filePath = `${timestamp}-${file.name.replace(/[^a-zA-Z0-9-.]/g, '_')}`;
+        
+        // Upload file to Supabase Storage
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('couple-photos')
+          .upload(filePath, file, { 
+            upsert: true,
+            cacheControl: '3600'
+          });
+
+        if (uploadError) {
+          console.error('Upload error:', uploadError);
+          throw new Error(`Failed to upload ${file.name}`);
+        }
+
+        // Get the public URL
+        const { data: { publicUrl } } = supabase.storage
+          .from('couple-photos')
+          .getPublicUrl(filePath);
+
+        urls.push(publicUrl);
+      }
+
+      // Save photos to the database
+      const response = await fetch('/api/photos', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          photos: [...formData.photos, ...urls],
+          weddingId: formData.weddingId
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save photos to database');
+      }
+
+      // Update local state with new photo URLs
+      setFormData(prev => ({
+        ...prev,
+        photos: [...prev.photos, ...urls]
+      }));
+
+    } catch (error) {
+      console.error('Upload error:', error);
+      setUploadError('Failed to upload one or more photos. Please try again.');
+    } finally {
+      setIsUploading(false);
     }
   };
 
-  const removePhoto = (index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      photos: prev.photos.filter((_, i) => i !== index)
-    }));
-  };
+  const handlePhotoDelete = async (photoUrl: string) => {
+    try {
+      const response = await fetch(`/api/photos?url=${encodeURIComponent(photoUrl)}&weddingId=${formData.weddingId}`, {
+        method: 'DELETE',
+      });
 
-  const randomizeStyle = () => {
-    const randomPalette = colorPalettes[Math.floor(Math.random() * colorPalettes.length)];
-    const randomStyle = styleOptions[Math.floor(Math.random() * styleOptions.length)];
-    
-    setFormData(prev => ({
-      ...prev,
-      colorPalette: randomPalette.id,
-      customColors: randomPalette.colors,
-      style: randomStyle.id
-    }));
+      if (!response.ok) {
+        throw new Error('Failed to delete photo');
+      }
+
+      // Update local state to remove the deleted photo
+      setFormData(prev => ({
+        ...prev,
+        photos: prev.photos.filter(url => url !== photoUrl)
+      }));
+    } catch (error) {
+      console.error('Error deleting photo:', error);
+      setUploadError('Failed to delete photo. Please try again.');
+    }
   };
 
   const handleGenerate = () => {
-    console.log("Generating website with:", formData);
-    // TODO: Implement website generation
-    alert("Website generation coming soon! Your preferences have been saved.");
+    setShowPreview(true);
   };
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-[#fef9f3] to-[#fdf8f0] rounded-2xl p-6 border border-[#f0ebe4]">
-        <h2 className="text-[#181511] text-xl font-bold mb-2 flex items-center gap-2">
-          <Globe className="w-5 h-5" />
-          Website Builder
-        </h2>
-        <p className="text-[#887863]">
-          Create a beautiful, personalized wedding website for your guests.
-        </p>
-      </div>
+    <div className="w-full bg-white" style={{ backgroundColor: 'white' }}>
+      <div className="max-w-4xl mx-auto px-6 py-8 space-y-12">
+        {/* Header */}
+        <div className="text-center space-y-4">
+          <h1 className="text-4xl font-bold leading-tight" style={{ color: 'black' }}>
+            Create your wedding website
+          </h1>
+          <p className="text-lg max-w-2xl mx-auto leading-relaxed" style={{ color: 'black',  paddingBottom: '50px' }}>
+            Your wedding website is the perfect place to share details with your guests. It's easy to create and customize.
+          </p>
+        </div>
 
-      {/* Section 1: Wedding Details */}
-      <div className="bg-white rounded-xl border border-[#e5e1dc] p-6">
-        <h3 className="text-[#181511] text-lg font-semibold mb-4 flex items-center gap-2">
-          <User className="w-5 h-5" />
-          Wedding Details
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-[#181511] mb-2">
-              Bride's Name
-            </label>
-            <input
-              type="text"
-              value={formData.bride}
-              onChange={(e) => handleInputChange("bride", e.target.value)}
-              className="w-full px-3 py-2 border border-[#e5e1dc] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e89830] focus:border-transparent"
-            />
+        {/* Wedding Details Section */}
+        <div className="space-y-8" style={{ paddingLeft: '32px', paddingRight: '32px' }}>
+          <h2 className="text-2xl font-semibold" style={{ color: 'black' }}>Wedding Details</h2>
+          
+          <div className="grid grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <label className="block text-sm font-medium" style={{ color: 'black', paddingTop: '5px', paddingBottom: '5px' }}>
+                Bride's First Name
+              </label>
+              <input
+                type="text"
+                value={formData.bride}
+                onChange={(e) => handleInputChange("bride", e.target.value)}
+                className="w-full px-4 py-4 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                style={{ backgroundColor: 'white', color: 'black', borderRadius: '8px', height: '50px', width: '90%' }}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="block text-sm font-medium" style={{ color: 'black', paddingTop: '5px', paddingBottom: '5px' }}>
+                Groom's First Name
+              </label>
+              <input
+                type="text"
+                value={formData.groom}
+                onChange={(e) => handleInputChange("groom", e.target.value)}
+                className="w-full px-4 py-4 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                style={{ backgroundColor: 'white', color: 'black', borderRadius: '8px', height: '50px', width: '90%' }}
+              />
+            </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-[#181511] mb-2">
-              Groom's Name
-            </label>
-            <input
-              type="text"
-              value={formData.groom}
-              onChange={(e) => handleInputChange("groom", e.target.value)}
-              className="w-full px-3 py-2 border border-[#e5e1dc] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e89830] focus:border-transparent"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-[#181511] mb-2 flex items-center gap-2">
-              <Calendar className="w-4 h-4" />
+
+          <div className="space-y-2">
+            <label className="block text-sm font-medium" style={{ color: 'black', paddingTop: '15px', paddingBottom: '5px' }}>
               Wedding Date
             </label>
             <input
               type="date"
               value={formData.date}
               onChange={(e) => handleInputChange("date", e.target.value)}
-              className="w-full px-3 py-2 border border-[#e5e1dc] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e89830] focus:border-transparent"
+              className="w-full max-w-md px-4 py-4 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              style={{ backgroundColor: 'white', color: 'black', borderRadius: '8px' , height: '50px', width: '95%'}}
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-[#181511] mb-2 flex items-center gap-2">
-              <MapPin className="w-4 h-4" />
+
+          <div className="space-y-2">
+            <label className="block text-sm font-medium" style={{ color: 'black', paddingTop: '15px', paddingBottom: '5px' }}>
               Venue
             </label>
             <input
               type="text"
               value={formData.venue}
               onChange={(e) => handleInputChange("venue", e.target.value)}
-              className="w-full px-3 py-2 border border-[#e5e1dc] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e89830] focus:border-transparent"
+              className="w-full max-w-md px-4 py-4 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              style={{ backgroundColor: 'white', color: 'black', borderRadius: '8px', height: '50px', width: '95%' }}
             />
           </div>
         </div>
 
-        {/* Photo Upload */}
-        <div className="mt-6">
-          <label className="block text-sm font-medium text-[#181511] mb-2 flex items-center gap-2">
-            <Image className="w-4 h-4" />
-            Wedding Photos
-          </label>
-          <div className="border-2 border-dashed border-[#e5e1dc] rounded-lg p-6 text-center">
-            <Upload className="w-8 h-8 text-[#887863] mx-auto mb-2" />
-            <p className="text-[#887863] mb-2">Drag and drop photos or click to browse</p>
-            <input
-              type="file"
-              multiple
-              accept="image/*"
-              onChange={handlePhotoUpload}
-              className="hidden"
-              id="photo-upload"
-            />
-            <label
-              htmlFor="photo-upload"
-              className="inline-block px-4 py-2 bg-[#e89830] text-[#181511] rounded-lg cursor-pointer hover:bg-[#d88a29] transition-colors"
-            >
-              Choose Photos
-            </label>
+        {/* Photo Upload Section */}
+        <div className="space-y-6 rounded-lg p-6" style={{ border: '2px dashed #d1d5db', borderRadius: '8px', paddingTop: '5px', paddingBottom: '20px', marginTop: '40px', width: '90%', marginLeft: '32px'}}>
+          <div className="text-center space-y-4">
+            <h3 className="text-2xl font-semibold" style={{ color: 'black' }}>Upload Photos</h3>
+            <p className="text-sm max-w-xl mx-auto" style={{ color: 'black' }}>
+              Add photos of you and your partner to personalize your website.
+            </p>
+            {uploadError && (
+              <p className="text-red-500 text-sm">{uploadError}</p>
+            )}
           </div>
-          
+          <div className="flex justify-center">
+            <div className="relative">
+              <input
+                type="file"
+                multiple
+                accept="image/*"
+                onChange={handlePhotoUpload}
+                className="hidden"
+                id="photo-upload"
+                disabled={isUploading}
+              />
+              <label
+                htmlFor="photo-upload"
+                className={`inline-block px-8 py-3 text-sm bg-gray-100 rounded-lg cursor-pointer hover:bg-gray-200 transition-colors font-medium border border-gray-300 ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                style={{ color: 'black', paddingTop: '5px', paddingBottom: '5px', paddingLeft: '5px', paddingRight: '5px', borderRadius: '8px' }}
+              >
+                {isUploading ? 'Uploading...' : 'Upload Photos'}
+              </label>
+            </div>
+          </div>
           {/* Photo Preview */}
           {formData.photos.length > 0 && (
-            <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
-              {formData.photos.map((photo, index) => (
-                <div key={index} className="relative">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 max-w-xl mx-auto">
+              {formData.photos.slice(0, 6).map((photoUrl, index) => (
+                <div key={index} className="relative aspect-square group">
                   <img
-                    src={URL.createObjectURL(photo)}
+                    src={photoUrl}
                     alt={`Preview ${index + 1}`}
-                    className="w-full h-24 object-cover rounded-lg"
+                    className="w-full h-full object-cover rounded-lg border border-gray-200 shadow-sm"
                   />
                   <button
-                    onClick={() => removePhoto(index)}
-                    className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full text-xs hover:bg-red-600"
+                    onClick={() => handlePhotoDelete(photoUrl)}
+                    className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                    aria-label="Delete photo"
                   >
-                    ×
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                    </svg>
                   </button>
                 </div>
               ))}
             </div>
           )}
         </div>
-      </div>
 
-      {/* Section 2: Style & Design */}
-      <div className="bg-white rounded-xl border border-[#e5e1dc] p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-[#181511] text-lg font-semibold flex items-center gap-2">
-            <Palette className="w-5 h-5" />
-            Style & Design
-          </h3>
-          <button
-            onClick={randomizeStyle}
-            className="flex items-center gap-2 px-3 py-1 bg-[#f4f3f0] text-[#181511] rounded-lg hover:bg-[#ebe9e5] transition-colors"
+        {/* Generate Website Button */}
+        <div className="flex justify-center pt-10 pb-8">
+          <a
+            href={`/website/preview?id=${formData.weddingId}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-10 py-3 text-base bg-amber-200 rounded-full font-medium hover:bg-amber-300 transition-colors shadow-sm flex items-center justify-center"
+            style={{ color: 'black', marginTop: '40px', textDecoration: 'none' }}
           >
-            <Shuffle className="w-4 h-4" />
-            Randomize
-          </button>
+            Generate Website
+          </a>
         </div>
 
-        {/* Color Palettes */}
-        <div className="mb-6">
-          <h4 className="font-medium text-[#181511] mb-3">Color Palette</h4>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-            {colorPalettes.map((palette) => (
-              <button
-                key={palette.id}
-                onClick={() => handleColorPaletteSelect(palette)}
-                className={cn(
-                  "p-3 border rounded-lg transition-all hover:shadow-md",
-                  formData.colorPalette === palette.id
-                    ? "border-[#e89830] ring-2 ring-[#e89830] ring-opacity-20"
-                    : "border-[#e5e1dc]"
-                )}
-              >
-                <div className="flex gap-1 mb-2">
-                  {palette.preview.map((color, index) => (
-                    <div
-                      key={index}
-                      className="w-8 h-8 rounded-full"
-                      style={{ backgroundColor: color }}
-                    />
-                  ))}
-                </div>
-                <p className="text-sm font-medium text-[#181511]">{palette.name}</p>
-              </button>
-            ))}
+        {/* Interactive Preview Placeholder */}
+        {showPreview && (
+          <div className="mt-10 p-8 border border-gray-300 rounded-lg bg-gray-50 text-center" style={{ minHeight: '200px' }}>
+            <h3 className="text-xl font-semibold mb-4" style={{ color: 'black' }}>Interactive Website Preview</h3>
+            <p style={{ color: 'black' }}>This is where your customizable wedding website preview will appear.</p>
           </div>
-
-          {/* Custom Colors */}
-          <div className="mt-4 p-4 bg-[#f9f8f6] rounded-lg">
-            <h5 className="font-medium text-[#181511] mb-3">Custom Colors</h5>
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <label className="block text-xs text-[#887863] mb-1">Primary</label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="color"
-                    value={formData.customColors.primary}
-                    onChange={(e) => handleCustomColorChange("primary", e.target.value)}
-                    className="w-8 h-8 rounded border border-[#e5e1dc]"
-                  />
-                  <input
-                    type="text"
-                    value={formData.customColors.primary}
-                    onChange={(e) => handleCustomColorChange("primary", e.target.value)}
-                    className="flex-1 px-2 py-1 text-xs border border-[#e5e1dc] rounded"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs text-[#887863] mb-1">Secondary</label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="color"
-                    value={formData.customColors.secondary}
-                    onChange={(e) => handleCustomColorChange("secondary", e.target.value)}
-                    className="w-8 h-8 rounded border border-[#e5e1dc]"
-                  />
-                  <input
-                    type="text"
-                    value={formData.customColors.secondary}
-                    onChange={(e) => handleCustomColorChange("secondary", e.target.value)}
-                    className="flex-1 px-2 py-1 text-xs border border-[#e5e1dc] rounded"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs text-[#887863] mb-1">Accent</label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="color"
-                    value={formData.customColors.accent}
-                    onChange={(e) => handleCustomColorChange("accent", e.target.value)}
-                    className="w-8 h-8 rounded border border-[#e5e1dc]"
-                  />
-                  <input
-                    type="text"
-                    value={formData.customColors.accent}
-                    onChange={(e) => handleCustomColorChange("accent", e.target.value)}
-                    className="flex-1 px-2 py-1 text-xs border border-[#e5e1dc] rounded"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Style Options */}
-        <div>
-          <h4 className="font-medium text-[#181511] mb-3">Overall Style</h4>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-            {styleOptions.map((style) => (
-              <button
-                key={style.id}
-                onClick={() => handleInputChange("style", style.id)}
-                className={cn(
-                  "p-4 border rounded-lg text-left transition-all hover:shadow-md",
-                  formData.style === style.id
-                    ? "border-[#e89830] ring-2 ring-[#e89830] ring-opacity-20 bg-[#fef9f3]"
-                    : "border-[#e5e1dc] hover:border-[#d0c7ba]"
-                )}
-              >
-                <h5 className="font-medium text-[#181511] mb-1">{style.name}</h5>
-                <p className="text-xs text-[#887863]">{style.description}</p>
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Generate Button */}
-      <div className="flex justify-center">
-        <button
-          onClick={handleGenerate}
-          disabled={!formData.style || !formData.colorPalette}
-          className={cn(
-            "px-8 py-3 rounded-xl font-bold tracking-[0.015em] transition-all",
-            formData.style && formData.colorPalette
-              ? "bg-[#e89830] text-[#181511] hover:bg-[#d88a29] hover:shadow-lg"
-              : "bg-[#f4f3f0] text-[#887863] cursor-not-allowed"
-          )}
-        >
-          Generate Wedding Website
-        </button>
+        )}
       </div>
     </div>
   );
