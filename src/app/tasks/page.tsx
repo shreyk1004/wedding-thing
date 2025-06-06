@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { WeddingHeader } from '@/components/wedding-header';
 import { TaskList } from '@/components/task-list';
-import { Task } from '@/types';
+import { Task, WeddingInfo } from '@/types';
 import { supabase } from '@/lib/supabase';
 
 const initialTasks: Task[] = [
@@ -17,6 +17,13 @@ const initialTasks: Task[] = [
   { id: '8', title: 'Buy wedding dress', status: 'done', description: 'Find and purchase the perfect dress' },
 ];
 
+
+const weddingInfo: WeddingInfo = {
+  bride: 'Sarah',
+  groom: 'Alex',
+  date: '2024-10-12',
+  venue: 'Garden Rose Manor',
+};
 export default function TasksPage() {
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
   const [weddingDetails, setWeddingDetails] = useState<any>(null);
