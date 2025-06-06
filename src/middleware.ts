@@ -10,7 +10,7 @@ export async function middleware(req: NextRequest) {
   const { data: { session } } = await supabase.auth.getSession();
 
   // Define API routes that don't require authentication
-  const publicApiRoutes = ['/api/task-help'];
+  const publicApiRoutes = ['/api/task-help', '/api/chat', '/api/wedding', '/api/agent'];
   const isPublicApiRoute = publicApiRoutes.some(route => 
     req.nextUrl.pathname.startsWith(route)
   );
