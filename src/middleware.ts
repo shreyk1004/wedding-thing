@@ -7,8 +7,12 @@ export async function middleware(req: NextRequest) {
   const supabase = createMiddlewareClient({ req, res });
 
   // Refresh session if expired - required for Server Components
-  const { data: { session } } = await supabase.auth.getSession();
+  await supabase.auth.getSession();
 
+  // Allow API routes to pass through since RLS is disabled
+  // and we're using anon key with disabled authentication
+  if (req.nextUrl.pathname.startsWith('/api/')) {
+    return res;
   // Define API routes that don't require authentication
   const publicApiRoutes = ['/api/task-help', '/api/chat', '/api/wedding', '/api/agent'];
   const isPublicApiRoute = publicApiRoutes.some(route => 
