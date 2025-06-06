@@ -38,7 +38,7 @@ export async function POST(request: Request) {
 
     // Update the wedding record with new photos
     const { error } = await supabase
-      .from('wedding')
+      .from('weddings')
       .update({ 
         photos: validatedData.photos 
       })
@@ -86,27 +86,29 @@ export async function DELETE(request: Request) {
     }
 
     // Get current photos
-    const { data: wedding } = await supabase
-      .from('wedding')
+    const { data: existingWedding, error: fetchError } = await supabase
+      .from('weddings')
       .select('photos')
       .eq('id', weddingId)
       .single();
 
-    if (!wedding) {
+    if (!existingWedding) {
       return new NextResponse('Wedding not found', { status: 404 });
     }
 
     // Remove the photo URL from the array
-    const updatedPhotos = wedding.photos.filter((p: string) => p !== photoUrl);
+    const updatedPhotos = existingWedding.photos.filter((p: string) => p !== photoUrl);
 
     // Update the wedding record
-    const { error } = await supabase
-      .from('wedding')
+    const { data: updatedWedding, error: updateError } = await supabase
+      .from('weddings')
       .update({ photos: updatedPhotos })
-      .eq('id', weddingId);
+      .eq('id', weddingId)
+      .select()
+      .single();
 
-    if (error) {
-      console.error('Database error:', error);
+    if (updateError) {
+      console.error('Database error:', updateError);
       return new NextResponse('Internal Server Error', { status: 500 });
     }
 

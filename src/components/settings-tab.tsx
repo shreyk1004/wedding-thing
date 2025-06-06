@@ -11,7 +11,7 @@ export function SettingsTab() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <label className="block text-sm font-medium text-[#181511] mb-2">
-              Bride's Name
+              Bride&apos;s Name
             </label>
             <input
               type="text"
@@ -21,7 +21,7 @@ export function SettingsTab() {
           </div>
           <div>
             <label className="block text-sm font-medium text-[#181511] mb-2">
-              Groom's Name
+              Groom&apos;s Name
             </label>
             <input
               type="text"

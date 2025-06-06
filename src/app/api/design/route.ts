@@ -29,24 +29,24 @@ export async function POST(request: Request) {
     const { weddingId } = DesignRequestSchema.parse(body);
 
     // Get wedding details
-    const { data: wedding, error } = await supabase
-      .from('wedding')
+    const { data: existingWedding, error: fetchError } = await supabase
+      .from('weddings')
       .select('*')
       .eq('id', weddingId)
       .single();
 
-    if (error || !wedding) {
+    if (fetchError || !existingWedding) {
       return new NextResponse('Wedding not found', { status: 404 });
     }
 
     // Generate design using GPT
     const prompt = `
-      Create a wedding website design for a ${wedding.theme} themed wedding.
-      The couple's names are ${wedding.partner1name} and ${wedding.partner2name}.
-      The wedding is in ${wedding.city}.
+      Create a wedding website design for a ${existingWedding.theme} themed wedding.
+      The couple's names are ${existingWedding.partner1name} and ${existingWedding.partner2name}.
+      The wedding is in ${existingWedding.city}.
       
       Please provide:
-      1. A color palette with exactly 3 colors (primary, secondary, accent) that match the ${wedding.theme} theme. Return only hex codes.
+      1. A color palette with exactly 3 colors (primary, secondary, accent) that match the ${existingWedding.theme} theme. Return only hex codes.
       2. Select appropriate fonts from these options:
          - For names (choose from): ${AVAILABLE_FONTS.names.join(', ')}
          - For date/time/venue (choose from): ${AVAILABLE_FONTS.datetime.join(', ')}
@@ -90,12 +90,12 @@ export async function POST(request: Request) {
     const design = JSON.parse(content) as WeddingDesign;
 
     // Store the design in Supabase
-    const { error: updateError } = await supabase
-      .from('wedding')
-      .update({
-        design: design
-      })
-      .eq('id', weddingId);
+    const { data: updatedWedding, error: updateError } = await supabase
+      .from('weddings')
+      .update({ design: design })
+      .eq('id', weddingId)
+      .select()
+      .single();
 
     if (updateError) {
       return new NextResponse('Failed to save design', { status: 500 });

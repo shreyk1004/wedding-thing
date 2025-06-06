@@ -40,7 +40,7 @@ export function extractWeddingDetails(messages: ChatMessage[]): Partial<WeddingD
     const mdMatch = line.match(/^[-*]\s*\*\*(.+?):\*\*\s*(.+)$/i);
     if (mdMatch) {
       const fieldRaw = mdMatch[1].trim().toLowerCase();
-      let value = mdMatch[2].trim();
+      const value = mdMatch[2].trim();
       const key = FIELD_MAP[fieldRaw];
       if (key) {
         if (key === 'partner1Name') {

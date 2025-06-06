@@ -1,0 +1,110 @@
+.previewContainer {
+  --primary-color: var(--primary-color);
+  --secondary-color: var(--secondary-color);
+  --accent-color: var(--accent-color);
+  --names-font: var(--names-font);
+  --datetime-font: var(--datetime-font);
+  --body-font: var(--body-font);
+}
+
+.heroSection {
+  height: 100vh;
+  min-height: 600px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.heroOverlay {
+  position: absolute;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.4);
+  z-index: 1;
+}
+
+.heroContent {
+  position: relative;
+  z-index: 10;
+  text-align: center;
+  color: white;
+  padding: 2rem;
+}
+
+.heroTitle {
+  font-size: 3.75rem;
+  margin-bottom: 1rem;
+  font-family: var(--names-font);
+  font-weight: 700;
+}
+
+.heroDate {
+  font-size: 1.5rem;
+  font-family: var(--datetime-font);
+  margin-bottom: 0.5rem;
+}
+
+.heroLocation {
+  font-size: 1.25rem;
+  margin-top: 0.5rem;
+  font-family: var(--datetime-font);
+}
+
+.storySection {
+  padding: 5rem 0;
+  background-color: var(--secondary-color);
+}
+
+.storyTitle {
+  font-size: 2.25rem;
+  margin-bottom: 2.5rem;
+  text-align: center;
+  font-family: var(--names-font);
+  color: var(--primary-color);
+}
+
+.detailsSection {
+  padding: 5rem 1rem;
+  background-color: var(--primary-color);
+}
+
+.detailsTitle {
+  font-size: 2.25rem;
+  margin-bottom: 2.5rem;
+  font-family: var(--names-font);
+  color: var(--accent-color);
+}
+
+.detailsSubtitle {
+  font-size: 1.5rem;
+  font-family: var(--datetime-font);
+  color: var(--accent-color);
+}
+
+.detailsText {
+  font-family: var(--body-font);
+  color: var(--secondary-color);
+}
+
+.contactSection {
+  padding: 5rem 1rem;
+  background-color: var(--accent-color);
+}
+
+.contactTitle {
+  font-size: 2.25rem;
+  margin-bottom: 2.5rem;
+  font-family: var(--names-font);
+  color: var(--primary-color);
+}
+
+.contactText {
+  font-family: var(--body-font);
+  color: var(--secondary-color);
+}
+
+.contactInfo {
+  font-family: var(--datetime-font);
+  color: var(--primary-color);
+} 

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChatMessage, WeddingDetails } from '@/types/wedding';
+import { ChatMessage } from '@/types/wedding';
 import { extractWeddingDetails } from '@/lib/extractWeddingDetails';
 
 const STARTER_MESSAGE: ChatMessage = {
@@ -73,7 +73,6 @@ export function WeddingChat() {
       });
       const data = await res.json();
       if (data.functionCall && data.details) {
-        // Model has called the function with structured details
         setMessages(prev => [...prev, { role: 'assistant', content: 'Thank you! All your details have been collected.' }]);
         setIsComplete(true);
         setMissingFields([]);
@@ -92,10 +91,10 @@ export function WeddingChat() {
               setHasSaved(true);
               localStorage.setItem('weddingDetails', JSON.stringify(data.details));
             } else {
-              const err = await saveRes.text();
-              setSaveError(err || 'Failed to save details.');
+              const errorText = await saveRes.text();
+              setSaveError(errorText || 'Failed to save details.');
             }
-          } catch (err: any) {
+          } catch {
             setSaveError('Failed to save details.');
           } finally {
             setIsSaving(false);
@@ -103,39 +102,15 @@ export function WeddingChat() {
         }
         return;
       }
-      // Otherwise, show the assistant's reply as before
       const assistantMessage: ChatMessage = { role: 'assistant', content: data.reply };
       setMessages(prev => [...prev, assistantMessage]);
-      // Extraction for debug only
       const details = extractWeddingDetails([...messages, userMessage, assistantMessage]);
       console.log('Extracted details:', details);
       const missingFields = REQUIRED_FIELDS.filter(field => !(field in details));
       setMissingFields(missingFields);
       const isAllFieldsComplete = missingFields.length === 0;
       setIsComplete(isAllFieldsComplete);
-      if (isAllFieldsComplete && !hasSaved) {
-        setIsSaving(true);
-        setSaveError(null);
-        try {
-          const saveRes = await fetch('/api/wedding', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(details),
-          });
-          if (saveRes.ok) {
-            setSaveSuccess(true);
-            setHasSaved(true);
-          } else {
-            const err = await saveRes.text();
-            setSaveError(err || 'Failed to save details.');
-          }
-        } catch (err: any) {
-          setSaveError('Failed to save details.');
-        } finally {
-          setIsSaving(false);
-        }
-      }
-    } catch (err) {
+    } catch {
       setMessages(prev => [...prev, { role: 'assistant', content: 'Sorry, there was an error. Please try again.' }]);
     } finally {
       setIsLoading(false);
@@ -147,7 +122,7 @@ export function WeddingChat() {
       {/* Chat Header */}
       <div className="bg-gradient-to-r from-[#4f8cff] to-[#6ed0fa] px-6 py-4">
         <h2 className="text-xl font-bold text-white tracking-tight">Wedding Planning Chat Assistant</h2>
-        <p className="text-sm text-blue-100 mt-1">Let's plan your perfect day together!</p>
+        <p className="text-sm text-blue-100 mt-1">Let&apos;s plan your perfect day together!</p>
       </div>
       {/* Chat Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-6 space-y-4 bg-[#f4f6fb]">
@@ -176,7 +151,7 @@ export function WeddingChat() {
       {isComplete ? (
         <div className="p-4 bg-green-100 border-t border-green-300 text-center">
           <p className="text-green-900 font-semibold">
-            🎉 Great! We have all the information we need. Let's move on to planning your perfect wedding!
+            🎉 Great! We have all the information we need. Let&apos;s move on to planning your perfect wedding!
           </p>
           {isSaving && <p className="text-blue-700 mt-2">Saving your details...</p>}
           {saveSuccess && <p className="text-green-800 mt-2">Your details have been saved!</p>}

@@ -1,28 +1,48 @@
-import { weddingDetailsSchema } from '@/types/wedding';
-import { supabase } from '@/lib/supabase';
+import { NextRequest, NextResponse } from 'next/server';
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { cookies } from 'next/headers';
+import { z } from 'zod';
 
-export async function POST(req: Request) {
+const WeddingSchema = z.object({
+  partner1name: z.string(),
+  partner2name: z.string(),
+  weddingdate: z.string(),
+  city: z.string(),
+  theme: z.string().optional(),
+  photos: z.array(z.string()).optional(),
+  design: z.any().optional(),
+});
+
+export async function POST(request: Request) {
   try {
-    const data = await req.json();
-    // Validate data
-    const parsed = weddingDetailsSchema.safeParse(data);
-    if (!parsed.success) {
-      return new Response('Invalid data', { status: 400 });
-    }
-    // Convert keys to lowercase for Supabase
-    const lowercasedData = Object.fromEntries(
-      Object.entries(parsed.data).map(([k, v]) => [k.toLowerCase(), v])
-    );
-    // Save to Supabase
-    const { error } = await supabase
+    const supabase = createRouteHandlerClient({ cookies });
+
+    // Validate request body
+    const body = await request.json();
+    const validatedData = WeddingSchema.parse(body);
+
+    // Insert into database
+    const { data, error } = await supabase
       .from('weddings')
-      .insert([lowercasedData]);
+      .insert([{
+        ...validatedData,
+        contactemail: '',
+        estimatedguestcount: 0,
+        specialrequirements: [],
+        theme: validatedData.theme || 'modern',
+        photos: validatedData.photos || [],
+      }])
+      .select()
+      .single();
+
     if (error) {
-      console.error('Supabase error:', error);
-      return new Response('Failed to save to Supabase: ' + error.message, { status: 500 });
+      console.error('Database error:', error);
+      return NextResponse.json({ error: 'Failed to create wedding' }, { status: 500 });
     }
-    return new Response('OK', { status: 200 });
-  } catch (err) {
-    return new Response('Failed to save', { status: 500 });
+
+    return NextResponse.json(data);
+  } catch (error) {
+    console.error('Request error:', error);
+    return NextResponse.json({ error: 'Invalid request data' }, { status: 400 });
   }
 } 

@@ -1,65 +1,34 @@
-import { Inter } from 'next/font/google';
 import './globals.css';
-import { Sidebar } from '@/components/sidebar';
 import type { ReactNode } from 'react';
 import type { Metadata } from "next";
-
-// Import all the fonts we'll use
-const fontFamilies = [
-  'Playfair+Display',
-  'Cormorant+Garamond',
-  'Libre+Baskerville',
-  'Cinzel',
-  'Italiana',
-  'Gilda+Display',
-  'Marcellus',
-  'Spectral',
-  'Crimson+Text',
-  'Bodoni+Moda',
-  'Montserrat',
-  'Lato',
-  'Open+Sans',
-  'Raleway',
-  'Nunito+Sans',
-  'Source+Sans+Pro',
-  'Work+Sans',
-  'Quicksand',
-  'DM+Sans',
-  'Inter',
-  'Karla',
-  'Mulish',
-  'Roboto',
-  'Poppins',
-  'Manrope',
-  'Outfit',
-  'Plus+Jakarta+Sans',
-  'Albert+Sans',
-  'Sora',
-  'Urbanist'
-].join('&family=');
+import { Sidebar } from '@/components/sidebar';
 
 export const metadata: Metadata = {
-  title: "Weddy - AI Wedding Planning Tool",
-  description: "A modern, elegant wedding planning tool to help you organize your perfect day.",
+  title: 'Wedding Website Generator',
+  description: 'Create your perfect wedding website with AI assistance',
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: ReactNode;
+}) {
   return (
     <html lang="en">
       <head>
-        <link
-          href={`https://fonts.googleapis.com/css2?family=${fontFamilies}&display=swap`}
-          rel="stylesheet"
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link 
+          href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Cormorant+Garamond:wght@400;700&family=Libre+Baskerville:wght@400;700&family=Cinzel:wght@400;700&family=Italiana&family=Gilda+Display&family=Marcellus&family=Spectral:wght@400;700&family=Crimson+Text:wght@400;700&family=Bodoni+Moda:wght@400;700&family=Montserrat:wght@300;400;500;600;700&family=Lato:wght@300;400;700&family=Open+Sans:wght@300;400;600;700&family=Raleway:wght@300;400;500;600;700&family=Nunito+Sans:wght@300;400;600;700&family=Source+Sans+Pro:wght@300;400;600;700&family=Work+Sans:wght@300;400;500;600;700&family=Quicksand:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;700&family=Inter:wght@300;400;500;600;700&family=Karla:wght@300;400;500;600;700&family=Mulish:wght@300;400;500;600;700&family=Roboto:wght@300;400;500;700&family=Poppins:wght@300;400;500;600;700&family=Manrope:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Albert+Sans:wght@300;400;500;600;700&family=Sora:wght@300;400;500;600;700&family=Urbanist:wght@300;400;500;600;700&display=swap" 
+          rel="stylesheet" 
         />
       </head>
-      <body className="relative flex size-full min-h-screen flex-col bg-gradient-to-br from-[#fefefe] to-[#f9f8f6] overflow-x-hidden">
-        <div className="flex h-full grow">
+      <body className="bg-[#fafafa] min-h-screen">
+        <div className="flex min-h-screen">
           <Sidebar />
-          <div className="flex-1 flex justify-center">
-            <div className="w-full max-w-[960px] p-4">
-              {children}
-            </div>
-          </div>
+          <main className="flex-1 p-6 bg-[#fafafa]">
+            {children}
+          </main>
         </div>
       </body>
     </html>

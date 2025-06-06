@@ -1,59 +1,83 @@
 "use client";
 
-import { useState } from "react";
-import { cn } from "@/lib/utils";
-import { supabase } from "@/lib/supabaseClient";
+import { useState, useEffect } from "react";
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import Image from 'next/image';
+import { useSearchParams } from 'next/navigation';
 
-interface WebsiteFormData {
+interface WeddingFormData {
   bride: string;
   groom: string;
   date: string;
   venue: string;
   photos: string[];
-  colorPalette: number;
-  style: string;
   weddingId?: string;
 }
 
-const colorPalettes = [
-  "#ffffff", // White
-  "#f5f5f5", // Light gray
-  "#e0e0e0", // Medium light gray
-  "#d0d0d0", // Medium gray
-  "#b0b0b0", // Darker gray
-  "#a0a0a0", // Even darker gray
-  "#808080", // Dark gray
-  "#606060"  // Very dark gray
-];
-
-const styleOptions = [
-  { id: "elegant", name: "Elegant", preview: "/elegant-preview.jpg" },
-  { id: "modern", name: "Modern", preview: "/modern-preview.jpg" },
-  { id: "rustic", name: "Rustic", preview: "/rustic-preview.jpg" }
-];
-
 export function WebsiteTab() {
-  const [formData, setFormData] = useState<WebsiteFormData>({
+  const searchParams = useSearchParams();
+  const weddingId = searchParams.get('id');
+  const supabase = createClientComponentClient();
+
+  const [formData, setFormData] = useState<WeddingFormData>({
     bride: "",
     groom: "",
     date: "",
     venue: "",
     photos: [],
-    colorPalette: 0,
-    style: "elegant",
     weddingId: undefined
   });
-  const [showPreview, setShowPreview] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const handleInputChange = (field: keyof WebsiteFormData, value: any) => {
+  useEffect(() => {
+    async function fetchWeddingData() {
+      if (!weddingId) {
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        console.log('Fetching wedding data for ID:', weddingId);
+        const { data, error } = await supabase
+          .from('weddings')
+          .select('*')
+          .eq('id', weddingId)
+          .single();
+
+        if (error) {
+          console.error('Error fetching wedding:', error);
+          return;
+        }
+
+        console.log('Fetched wedding data:', data);
+        if (data) {
+          setFormData({
+            bride: data.partner1name || "",
+            groom: data.partner2name || "",
+            date: data.weddingdate || "",
+            venue: data.city || "",
+            photos: data.photos || [],
+            weddingId: data.id
+          });
+        }
+      } catch (err) {
+        console.error('Error:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchWeddingData();
+  }, [weddingId, supabase]);
+
+  const handleInputChange = (field: keyof WeddingFormData, value: string | string[]) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || !formData.weddingId) {
-      setUploadError('Please ensure you have created a wedding entry first.');
+    if (!e.target.files) {
       return;
     }
 
@@ -63,52 +87,89 @@ export function WebsiteTab() {
     setIsUploading(true);
 
     try {
-      for (const file of files) {
-        // Create a unique filename to avoid collisions
-        const timestamp = new Date().getTime();
-        const filePath = `${timestamp}-${file.name.replace(/[^a-zA-Z0-9-.]/g, '_')}`;
-        
-        // Upload file to Supabase Storage
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('couple-photos')
-          .upload(filePath, file, { 
-            upsert: true,
-            cacheControl: '3600'
-          });
+      // Only create a new wedding entry if we don't have a wedding ID
+      let currentWeddingId = formData.weddingId;
+      
+      if (!currentWeddingId) {
+        const response = await fetch('/api/wedding', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            partner1name: formData.bride,
+            partner2name: formData.groom,
+            weddingdate: formData.date,
+            city: formData.venue,
+            photos: [],
+            theme: 'modern', // default value
+            estimatedguestcount: 0, // default value
+            specialrequirements: [], // default value
+            contactemail: '', // default value
+            phone: '', // default value
+            budget: 0, // default value
+          }),
+        });
 
-        if (uploadError) {
-          console.error('Upload error:', uploadError);
-          throw new Error(`Failed to upload ${file.name}`);
+        if (!response.ok) {
+          throw new Error('Failed to create wedding entry');
         }
 
-        // Get the public URL
-        const { data: { publicUrl } } = supabase.storage
-          .from('couple-photos')
-          .getPublicUrl(filePath);
-
-        urls.push(publicUrl);
+        const data = await response.json();
+        currentWeddingId = data.id;
+        setFormData(prev => ({ ...prev, weddingId: data.id }));
       }
 
-      // Save photos to the database
-      const response = await fetch('/api/photos', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          photos: [...formData.photos, ...urls],
-          weddingId: formData.weddingId
-        }),
-      });
+      // Upload files using the server-side endpoint
+      for (const file of files) {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('weddingId', currentWeddingId!);
 
-      if (!response.ok) {
+        const uploadResponse = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!uploadResponse.ok) {
+          const error = await uploadResponse.json();
+          throw new Error(error.error || 'Failed to upload file');
+        }
+
+        const { url } = await uploadResponse.json();
+        urls.push(url);
+      }
+
+      // Get current photos from database to avoid race conditions
+      const { data: currentWedding, error: fetchError } = await supabase
+        .from('weddings')
+        .select('photos')
+        .eq('id', currentWeddingId)
+        .single();
+
+      if (fetchError) {
+        throw new Error('Failed to fetch current photos');
+      }
+
+      const currentPhotos = currentWedding.photos || [];
+      const updatedPhotos = [...currentPhotos, ...urls];
+
+      // Save photos to the database using the current wedding ID
+      const { error: updateError } = await supabase
+        .from('weddings')
+        .update({ 
+          photos: updatedPhotos
+        })
+        .eq('id', currentWeddingId);
+
+      if (updateError) {
         throw new Error('Failed to save photos to database');
       }
 
       // Update local state with new photo URLs
       setFormData(prev => ({
         ...prev,
-        photos: [...prev.photos, ...urls]
+        photos: updatedPhotos
       }));
 
     } catch (error) {
@@ -121,15 +182,36 @@ export function WebsiteTab() {
 
   const handlePhotoDelete = async (photoUrl: string) => {
     try {
-      const response = await fetch(`/api/photos?url=${encodeURIComponent(photoUrl)}&weddingId=${formData.weddingId}`, {
-        method: 'DELETE',
-      });
+      // Extract the filename from the URL
+      const urlParts = photoUrl.split('/');
+      const filename = urlParts[urlParts.length - 1];
+      const weddingId = formData.weddingId;
+      const filePath = `${weddingId}/${filename}`;
 
-      if (!response.ok) {
-        throw new Error('Failed to delete photo');
+      // Delete the photo from storage first
+      const { error: storageError } = await supabase.storage
+        .from('couple-photos')
+        .remove([filePath]);
+
+      if (storageError) {
+        console.error('Storage deletion error:', storageError);
+        throw new Error('Failed to delete photo from storage');
       }
 
-      // Update local state to remove the deleted photo
+      // Update the wedding record to remove the photo URL
+      const { error: dbError } = await supabase
+        .from('weddings')
+        .update({ 
+          photos: formData.photos.filter(url => url !== photoUrl)
+        })
+        .eq('id', formData.weddingId);
+
+      if (dbError) {
+        console.error('Database update error:', dbError);
+        throw new Error('Failed to update wedding record');
+      }
+
+      // Update local state
       setFormData(prev => ({
         ...prev,
         photos: prev.photos.filter(url => url !== photoUrl)
@@ -140,31 +222,74 @@ export function WebsiteTab() {
     }
   };
 
-  const handleGenerate = () => {
-    setShowPreview(true);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsUploading(true);
+    setUploadError(null);
+
+    try {
+      const endpoint = formData.weddingId ? `/api/wedding/${formData.weddingId}` : '/api/wedding';
+      const method = formData.weddingId ? 'PUT' : 'POST';
+
+      const response = await fetch(endpoint, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          partner1name: formData.bride,
+          partner2name: formData.groom,
+          weddingdate: formData.date,
+          city: formData.venue,
+          photos: formData.photos,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save wedding details');
+      }
+
+      const data = await response.json();
+      
+      // Redirect to preview
+      window.location.href = `/website/preview/${data.id}`;
+    } catch (error) {
+      console.error('Error saving wedding:', error);
+      setUploadError('Failed to save wedding details. Please try again.');
+    } finally {
+      setIsUploading(false);
+    }
   };
+
+  if (isLoading) {
+    return (
+      <div className="w-full bg-white flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <p style={{ color: 'black' }}>Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full bg-white" style={{ backgroundColor: 'white' }}>
-      <div className="max-w-4xl mx-auto px-6 py-8 space-y-12">
-        {/* Header */}
+      <form onSubmit={handleSubmit} className="max-w-4xl mx-auto px-6 py-8 space-y-12">
         <div className="text-center space-y-4">
           <h1 className="text-4xl font-bold leading-tight" style={{ color: 'black' }}>
-            Create your wedding website
+            {formData.weddingId ? 'Edit your wedding website' : 'Create your wedding website'}
           </h1>
-          <p className="text-lg max-w-2xl mx-auto leading-relaxed" style={{ color: 'black',  paddingBottom: '50px' }}>
-            Your wedding website is the perfect place to share details with your guests. It's easy to create and customize.
+          <p className="text-lg max-w-2xl mx-auto leading-relaxed" style={{ color: 'black', paddingBottom: '50px' }}>
+            Your wedding website is the perfect place to share details with your guests. It&apos;s easy to create and customize.
           </p>
         </div>
 
-        {/* Wedding Details Section */}
         <div className="space-y-8" style={{ paddingLeft: '32px', paddingRight: '32px' }}>
           <h2 className="text-2xl font-semibold" style={{ color: 'black' }}>Wedding Details</h2>
           
           <div className="grid grid-cols-2 gap-6">
             <div className="space-y-2">
               <label className="block text-sm font-medium" style={{ color: 'black', paddingTop: '5px', paddingBottom: '5px' }}>
-                Bride's First Name
+                Bride&apos;s First Name
               </label>
               <input
                 type="text"
@@ -176,7 +301,7 @@ export function WebsiteTab() {
             </div>
             <div className="space-y-2">
               <label className="block text-sm font-medium" style={{ color: 'black', paddingTop: '5px', paddingBottom: '5px' }}>
-                Groom's First Name
+                Groom&apos;s First Name
               </label>
               <input
                 type="text"
@@ -197,7 +322,7 @@ export function WebsiteTab() {
               value={formData.date}
               onChange={(e) => handleInputChange("date", e.target.value)}
               className="w-full max-w-md px-4 py-4 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              style={{ backgroundColor: 'white', color: 'black', borderRadius: '8px' , height: '50px', width: '95%'}}
+              style={{ backgroundColor: 'white', color: 'black', borderRadius: '8px', height: '50px', width: '95%' }}
             />
           </div>
 
@@ -215,7 +340,6 @@ export function WebsiteTab() {
           </div>
         </div>
 
-        {/* Photo Upload Section */}
         <div className="space-y-6 rounded-lg p-6" style={{ border: '2px dashed #d1d5db', borderRadius: '8px', paddingTop: '5px', paddingBottom: '20px', marginTop: '40px', width: '90%', marginLeft: '32px'}}>
           <div className="text-center space-y-4">
             <h3 className="text-2xl font-semibold" style={{ color: 'black' }}>Upload Photos</h3>
@@ -246,17 +370,20 @@ export function WebsiteTab() {
               </label>
             </div>
           </div>
-          {/* Photo Preview */}
-          {formData.photos.length > 0 && (
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 max-w-xl mx-auto">
-              {formData.photos.slice(0, 6).map((photoUrl, index) => (
+          {formData.photos && formData.photos.length > 0 && (
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 max-w-xl mx-auto mt-6">
+              {formData.photos.map((photoUrl, index) => (
                 <div key={index} className="relative aspect-square group">
-                  <img
+                  <Image
                     src={photoUrl}
                     alt={`Preview ${index + 1}`}
-                    className="w-full h-full object-cover rounded-lg border border-gray-200 shadow-sm"
+                    fill
+                    className="object-cover rounded-lg"
+                    sizes="(max-width: 768px) 50vw, 33vw"
+                    priority={index < 4}
                   />
                   <button
+                    type="button"
                     onClick={() => handlePhotoDelete(photoUrl)}
                     className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                     aria-label="Delete photo"
@@ -271,27 +398,16 @@ export function WebsiteTab() {
           )}
         </div>
 
-        {/* Generate Website Button */}
-        <div className="flex justify-center pt-10 pb-8">
-          <a
-            href={`/website/preview?id=${formData.weddingId}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-10 py-3 text-base bg-amber-200 rounded-full font-medium hover:bg-amber-300 transition-colors shadow-sm flex items-center justify-center"
-            style={{ color: 'black', marginTop: '40px', textDecoration: 'none' }}
+        <div className="flex justify-center pt-8">
+          <button
+            type="submit"
+            disabled={isUploading}
+            className="px-8 py-3 bg-[#e89830] text-white rounded-lg hover:bg-[#d88a29] transition-colors disabled:opacity-50"
           >
-            Generate Website
-          </a>
+            {isUploading ? 'Saving...' : (formData.weddingId ? 'Update Website' : 'Create Website')}
+          </button>
         </div>
-
-        {/* Interactive Preview Placeholder */}
-        {showPreview && (
-          <div className="mt-10 p-8 border border-gray-300 rounded-lg bg-gray-50 text-center" style={{ minHeight: '200px' }}>
-            <h3 className="text-xl font-semibold mb-4" style={{ color: 'black' }}>Interactive Website Preview</h3>
-            <p style={{ color: 'black' }}>This is where your customizable wedding website preview will appear.</p>
-          </div>
-        )}
-      </div>
+      </form>
     </div>
   );
 } 

@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
+import Image from 'next/image';
 import { supabase } from '@/lib/supabaseClient';
 
 interface WeddingData {
@@ -14,7 +15,7 @@ interface WeddingData {
   theme: string;
 }
 
-export default function WebsitePreviewPage() {
+function WebsitePreviewContent() {
   const searchParams = useSearchParams();
   const [weddingData, setWeddingData] = useState<WeddingData | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -28,7 +29,7 @@ export default function WebsitePreviewPage() {
 
     async function fetchWeddingData() {
       const { data, error } = await supabase
-        .from('wedding')
+        .from('weddings')
         .select('*')
         .eq('id', weddingId)
         .single();
@@ -87,11 +88,13 @@ export default function WebsitePreviewPage() {
         {weddingData.photos && weddingData.photos.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {weddingData.photos.map((photoUrl, index) => (
-              <div key={index} className="aspect-square rounded-lg overflow-hidden shadow-lg">
-                <img
+              <div key={index} className="aspect-square rounded-lg overflow-hidden shadow-lg relative">
+                <Image
                   src={photoUrl}
                   alt={`Wedding photo ${index + 1}`}
-                  className="w-full h-full object-cover"
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                 />
               </div>
             ))}
@@ -99,5 +102,19 @@ export default function WebsitePreviewPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function WebsitePreviewPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="text-center">
+          <p style={{ color: 'black' }}>Loading...</p>
+        </div>
+      </div>
+    }>
+      <WebsitePreviewContent />
+    </Suspense>
   );
 } 

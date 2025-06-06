@@ -20,7 +20,7 @@ export function WeddingHeader({ weddingInfo, completionPercentage }: WeddingHead
     <div className="flex flex-wrap justify-between gap-6 p-6 bg-gradient-to-r from-[#fef9f3] to-[#fdf8f0] rounded-2xl shadow-sm border border-[#f0ebe4]">
       <div className="flex min-w-72 flex-col gap-3">
         <h1 className="text-[#181511] tracking-tight text-[32px] font-bold leading-tight">
-          {weddingInfo.bride} & {weddingInfo.groom}'s Wedding
+          {weddingInfo.bride} & {weddingInfo.groom}&apos;s Wedding
         </h1>
         <p className="text-[#887863] text-lg font-medium leading-normal">
           {formatDate(weddingInfo.date)}

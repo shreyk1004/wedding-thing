@@ -32,7 +32,7 @@ export default function ChatPage() {
         <div className="flex-1 flex flex-col gap-4 mb-4">
           <div className="bg-[#f9f8f6] rounded-lg p-4 max-w-[80%]">
             <p className="text-[#181511] text-sm">
-              👋 Hi Sarah & Alex! I'm your AI wedding planning assistant. I can help you with:
+              👋 Hi Sarah & Alex! I&apos;m your AI wedding planning assistant. I can help you with:
             </p>
             <ul className="text-[#887863] text-sm mt-2 space-y-1">
               <li>• Finding and booking vendors</li>
