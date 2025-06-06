@@ -9,7 +9,7 @@ const openai = new OpenAI({
 // Define tools that OpenAI can use to help with tasks
 const taskTools = [
   {
-    type: "function",
+    type: "function" as const,
     function: {
       name: "search_web",
       description: "Search the web for current information about venues, vendors, or wedding services",
@@ -24,7 +24,7 @@ const taskTools = [
     }
   },
   {
-    type: "function",
+    type: "function" as const,
     function: {
       name: "generate_venue_cards",
       description: "Generate beautifully formatted venue recommendation cards with images",
@@ -41,7 +41,7 @@ const taskTools = [
     }
   },
   {
-    type: "function",
+    type: "function" as const,
     function: {
       name: "generate_vendor_cards",
       description: "Generate beautifully formatted vendor recommendation cards with images and pricing",
@@ -58,7 +58,7 @@ const taskTools = [
     }
   },
   {
-    type: "function",
+    type: "function" as const,
     function: {
       name: "generate_menu_cards",
       description: "Generate beautifully formatted catering and menu recommendation cards",
@@ -75,7 +75,7 @@ const taskTools = [
     }
   },
   {
-    type: "function",
+    type: "function" as const,
     function: {
       name: "generate_invitation_designs",
       description: "Generate invitation design ideas and recommendations",
@@ -91,7 +91,7 @@ const taskTools = [
     }
   },
   {
-    type: "function",
+    type: "function" as const,
     function: {
       name: "generate_accommodation_guide",
       description: "Generate hotel and accommodation recommendations for wedding guests",
@@ -107,7 +107,7 @@ const taskTools = [
     }
   },
   {
-    type: "function",
+    type: "function" as const,
     function: {
       name: "create_venue_checklist",
       description: "Create a detailed checklist for booking a wedding venue",
@@ -124,7 +124,7 @@ const taskTools = [
     }
   },
   {
-    type: "function",
+    type: "function" as const,
     function: {
       name: "suggest_vendors",
       description: "Suggest wedding vendors based on task type and location",
@@ -141,7 +141,7 @@ const taskTools = [
     }
   },
   {
-    type: "function",
+    type: "function" as const,
     function: {
       name: "create_timeline",
       description: "Create a timeline for completing wedding tasks",
@@ -157,10 +157,10 @@ const taskTools = [
     }
   },
   {
-    type: "function",
+    type: "function" as const,
     function: {
       name: "budget_breakdown",
-    description: "Provide budget breakdown and recommendations for a specific task",
+      description: "Provide budget breakdown and recommendations for a specific task",
       parameters: {
         type: "object",
         properties: {

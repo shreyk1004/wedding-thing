@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { z } from 'zod';
-import { weddingDetailsSchema } from '@/types/wedding';
-import { getSupabaseClient } from '@/lib/supabase';
 
 // Create Supabase client with anon key (RLS is disabled so this works)
 const supabase = createClient(
@@ -37,13 +35,6 @@ export async function POST(request: NextRequest): Promise<Response> {
 
     // Save to Supabase using anon key (RLS disabled)
     const { data, error } = await supabase
-    // Convert keys to lowercase for Supabase
-    const lowercasedData = Object.fromEntries(
-      Object.entries(parsed.data).map(([k, v]) => [k.toLowerCase(), v])
-    );
-    // Save to Supabase using admin client to bypass RLS
-    const supabase = getSupabaseClient(true);
-    const { error } = await supabase
       .from('weddings')
       .insert([validatedData])
       .select()
