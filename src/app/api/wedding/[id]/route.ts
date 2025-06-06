@@ -1,7 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
+import { createClient } from '@supabase/supabase-js';
 import { z } from 'zod';
+
+// Create Supabase client with anon key (RLS is disabled so this works)
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  }
+);
 
 const idSchema = z.object({ id: z.string().uuid() });
 
@@ -19,7 +30,6 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ): Promise<Response> {
-  const supabase = createRouteHandlerClient({ cookies });
   
   // Await the params promise
   const { id } = await params;
@@ -31,7 +41,7 @@ export async function GET(
   }
 
   const { data, error } = await supabase
-    .from('weddings')  // Fixed: was 'wedding', now 'weddings'
+    .from('weddings')
     .select('*')
     .eq('id', id)
     .single();
@@ -48,7 +58,6 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ): Promise<Response> {
-  const supabase = createRouteHandlerClient({ cookies });
   
   // Await the params promise
   const { id } = await params;
@@ -65,7 +74,7 @@ export async function PUT(
 
     // Update the wedding
     const { data, error } = await supabase
-      .from('weddings')  // Fixed: was 'wedding', now 'weddings'
+      .from('weddings')
       .update(validatedData)
       .eq('id', id)
       .select()

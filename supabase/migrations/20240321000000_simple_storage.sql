@@ -4,8 +4,8 @@ VALUES (
   'couple-photos',
   'couple-photos',
   true,
-  5242880, -- 5MB
-  ARRAY['image/jpeg', 'image/png', 'image/gif']::text[]
+  52428800, -- 50MB (for high-quality professional wedding photography)
+  ARRAY['image/jpeg', 'image/png', 'image/gif', 'image/webp']::text[]
 )
 ON CONFLICT (id) DO UPDATE
 SET 
