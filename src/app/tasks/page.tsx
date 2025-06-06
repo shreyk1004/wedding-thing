@@ -5,7 +5,7 @@ import { WeddingHeader } from '@/components/wedding-header';
 import { TaskList } from '@/components/task-list';
 import { Task } from '@/types';
 import { supabase, handleSupabaseQuery } from '@/lib/supabase';
-import { TaskAIHelpModal } from '@/components/task-ai-help-modal';
+import { useChatContext } from '@/components/chat-provider';
 
 const initialTasks: Task[] = [
   { id: '1', title: 'Book venue', status: 'todo', description: 'Find and reserve the perfect venue' },
@@ -23,7 +23,7 @@ export default function TasksPage() {
   const [weddingDetails, setWeddingDetails] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [aiModalTask, setAIModalTask] = useState<Task | null>(null);
+  const { openChat } = useChatContext();
 
   useEffect(() => {
     async function fetchWedding() {
@@ -87,12 +87,7 @@ export default function TasksPage() {
 
   const handleAIHelp = (task: Task) => {
     console.log('AI Help clicked for task:', task.title);
-    setAIModalTask(task);
-  };
-
-  const closeAIModal = () => {
-    console.log('Closing AI Help modal');
-    setAIModalTask(null);
+    openChat(task);
   };
 
   // Map Supabase fields to WeddingHeader fields
@@ -175,13 +170,7 @@ export default function TasksPage() {
         </div>
       </div>
       
-      {/* AI Help Modal */}
-      {aiModalTask && (
-        <TaskAIHelpModal
-          task={aiModalTask}
-          onClose={closeAIModal}
-        />
-      )}
+
     </div>
   );
 } 

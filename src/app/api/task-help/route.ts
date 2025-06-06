@@ -176,7 +176,7 @@ const taskTools = [
 
 export async function POST(request: NextRequest) {
   try {
-    const { task } = await request.json();
+    const { task, message, chatHistory } = await request.json();
 
     if (!task) {
       return NextResponse.json({ error: 'Task is required' }, { status: 400 });
@@ -212,16 +212,18 @@ Wedding Details:
 - Phone: ${wedding.phone || 'N/A'}
 ` : 'No wedding details available.';
 
-    const systemPrompt = `You are a helpful wedding planning assistant. You MUST use the provided tools to give specific, visual recommendations.
+    // Create messages array for conversation
+    const messages: any[] = [
+      {
+        role: "system",
+        content: `You are a helpful wedding planning assistant. You MUST use the provided tools to give specific, visual recommendations when appropriate.
 
 ${weddingContext}
 
 Current Task: "${task.title}"
 Task Description: "${task.description || 'No description provided'}"
 
-CRITICAL: You must identify the task type and use tools immediately. Do not describe what you will do - DO IT NOW.
-
-TASK TYPE & REQUIRED TOOLS:
+TASK TYPE & AVAILABLE TOOLS:
 - VENUE tasks → generate_venue_cards + budget_breakdown
 - PHOTOGRAPHER tasks → generate_vendor_cards (taskType: "photographer") + budget_breakdown  
 - DJ/MUSIC tasks → generate_vendor_cards (taskType: "DJ") + budget_breakdown
@@ -230,25 +232,42 @@ TASK TYPE & REQUIRED TOOLS:
 - INVITATION tasks → generate_invitation_designs + budget_breakdown
 - HOTEL/ACCOMMODATION tasks → generate_accommodation_guide + budget_breakdown
 
-Use the tools NOW to provide specific recommendations with images and pricing.`;
+Use tools when providing recommendations, but also engage in helpful conversation. Be friendly and conversational while being informative.`
+      }
+    ];
 
-          const completion = await openai.chat.completions.create({
-        model: "gpt-4",
-        messages: [
-          {
-            role: "system",
-            content: systemPrompt
-          },
-          {
-            role: "user",
-            content: `Use tools to help with: "${task.title}". Generate specific visual cards with images and pricing now.`
-          }
-        ],
-        tools: taskTools,
-        tool_choice: "required",
-        max_tokens: 2000,
-        temperature: 0.3,
+    // Add chat history if available
+    if (chatHistory && chatHistory.length > 0) {
+      chatHistory.forEach((msg: any) => {
+        messages.push({
+          role: msg.type === 'user' ? 'user' : 'assistant',
+          content: msg.content
+        });
       });
+    }
+
+    // Add current message or initial prompt
+    if (message) {
+      messages.push({
+        role: "user",
+        content: message
+      });
+    } else {
+      // Initial request - provide task recommendations
+      messages.push({
+        role: "user",
+        content: `Help me complete this task: "${task.title}". Create visual, well-formatted recommendations with images and pricing.`
+      });
+    }
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4",
+      messages,
+      tools: taskTools,
+      tool_choice: message ? "auto" : "required", // Required for initial requests, auto for follow-up
+      max_tokens: 2000,
+      temperature: 0.3,
+    });
 
     const response = completion.choices[0].message;
     
@@ -307,14 +326,7 @@ Use the tools NOW to provide specific recommendations with images and pricing.`;
       const finalCompletion = await openai.chat.completions.create({
         model: "gpt-4",
         messages: [
-          {
-            role: "system",
-            content: systemPrompt
-          },
-          {
-            role: "user",
-            content: `Help me complete this task: "${task.title}". Create visual, well-formatted recommendations with images and minimal text.`
-          },
+          ...messages,
           response,
           ...toolResults.map(result => ({
             role: "tool" as const,
@@ -328,12 +340,14 @@ Use the tools NOW to provide specific recommendations with images and pricing.`;
       
       return NextResponse.json({
         advice: finalCompletion.choices[0].message.content,
+        content: finalCompletion.choices[0].message.content,
         toolsUsed: response.tool_calls.map(tc => tc.function.name)
       });
     }
 
     return NextResponse.json({
       advice: response.content,
+      content: response.content,
       toolsUsed: []
     });
 
