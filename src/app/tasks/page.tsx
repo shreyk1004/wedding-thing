@@ -31,43 +31,57 @@ export default function TasksPage() {
   const [weddingDetails, setWeddingDetails] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [sessionDebug, setSessionDebug] = useState<any>(null);
   const { openChat } = useChatContext();
+
+  // Debug session status
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      const storedSession = localStorage.getItem('sb-atwcovxfbxxdrecjsfyy-auth-token');
+      
+      setSessionDebug({
+        hasSession: !!session,
+        user: session?.user?.email || null,
+        hasLocalStorage: !!storedSession,
+        error: error?.message || null
+      });
+      
+      console.log('🔍 Tasks page session check:', {
+        hasSession: !!session,
+        user: session?.user?.email || null,
+        hasLocalStorage: !!storedSession,
+        error: error?.message || null
+      });
+    };
+    
+    checkSession();
+  }, []);
 
   useEffect(() => {
     async function fetchWedding() {
       setLoading(true);
       setError(null);
       try {
-        console.log('Fetching wedding data from Supabase...');
+        console.log('Fetching wedding data from API...');
         
-        const { data, error } = await handleSupabaseQuery(
-          async () => await supabase
-            .from('weddings')
-            .select('*')
-            .order('created_at', { ascending: false })
-            .limit(1),
-          [] // Fallback to empty array if RLS blocks
-        );
+        const response = await fetch('/api/wedding');
+        const result = await response.json();
         
-        console.log('Supabase query result - data:', data, 'error:', error);
+        if (!response.ok) {
+          throw new Error(result.error || 'Failed to fetch wedding details');
+        }
         
-        if (error) {
-          console.error('Supabase error:', error);
-          setError('Failed to fetch wedding details. Please ensure you are signed in.');
-          setWeddingDetails(null);
+        console.log('API response:', result);
+        
+        if (result.data) {
+          setWeddingDetails(result.data);
         } else {
-          // Handle array response - take the first item if exists
-          const wedding = data && data.length > 0 ? data[0] : null;
-          console.log('Processed wedding details:', wedding);
-          setWeddingDetails(wedding);
-          
-          if (!wedding) {
-            setError('No wedding details found. Please complete the wedding setup first or sign in to view your data.');
-          }
+          setError('No wedding details found for your account. Please complete the wedding setup first.');
         }
       } catch (err) {
         console.error('Error fetching wedding details:', err);
-        setError('Failed to fetch wedding details. Please check your authentication.');
+        setError(err instanceof Error ? err.message : 'Failed to fetch wedding details. Please check your authentication.');
         setWeddingDetails(null);
       } finally {
         setLoading(false);
@@ -109,6 +123,17 @@ export default function TasksPage() {
 
   return (
     <div className="relative min-h-screen">
+      {/* Session Debug */}
+      {sessionDebug && (
+        <div className="fixed top-4 right-4 bg-black text-white p-3 rounded-lg text-xs max-w-sm z-50">
+          <div className="font-bold mb-1">🔍 Session Status</div>
+          <div>Client Session: {sessionDebug.hasSession ? '✅ YES' : '❌ NO'}</div>
+          <div>User: {sessionDebug.user || 'None'}</div>
+          <div>LocalStorage: {sessionDebug.hasLocalStorage ? '✅ YES' : '❌ NO'}</div>
+          {sessionDebug.error && <div className="text-red-300">Error: {sessionDebug.error}</div>}
+        </div>
+      )}
+      
       <div className="space-y-6">
         {loading && <div className="text-gray-500">Loading wedding details...</div>}
         

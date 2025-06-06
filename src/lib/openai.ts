@@ -11,30 +11,32 @@ const openai = new OpenAI({
 
 const SYSTEM_PROMPT = `You are a friendly and professional wedding planning assistant. Your goal is to gather all the required wedding details from the user. When you have all the information, call the submit_wedding_details function with the collected data. Do not summarize or end the conversation until you have called the function.`;
 
+const schema = {
+  type: 'object',
+  properties: {
+    partner1name: { type: 'string', description: 'First partner\'s name' },
+    partner2name: { type: 'string', description: 'Second partner\'s name' },
+    weddingdate: { type: 'string', description: 'Wedding date' },
+    city: { type: 'string', description: 'Wedding city/location' },
+    theme: { type: 'string', description: 'Wedding theme or vibe' },
+    estimatedguestcount: { type: 'number', description: 'Estimated number of guests' },
+    specialrequirements: { type: 'array', items: { type: 'string' }, description: 'Special requirements or needs' },
+    contactemail: { type: 'string', description: 'Contact email address' },
+    phone: { type: 'string', description: 'Phone number' },
+    budget: { type: 'number', description: 'Wedding budget' }
+  },
+  required: [
+    'partner1name', 'partner2name', 'weddingdate', 'city', 'theme',
+    'estimatedguestcount', 'contactemail', 'phone', 'budget'
+  ]
+};
+
 const weddingDetailsTool = {
   type: 'function' as const,
   function: {
     name: 'submit_wedding_details',
     description: 'Collect all wedding details from the user',
-    parameters: {
-      type: 'object',
-      properties: {
-        partner1Name: { type: 'string', description: 'Name of the first partner' },
-        partner2Name: { type: 'string', description: 'Name of the second partner' },
-        weddingDate: { type: 'string', description: 'Date of the wedding' },
-        city: { type: 'string', description: 'City or location of the wedding' },
-        theme: { type: 'string', description: 'Theme or vibe of the wedding' },
-        estimatedGuestCount: { type: 'number', description: 'Estimated number of guests' },
-        specialRequirements: { type: 'array', items: { type: 'string' }, description: 'Special requirements (e.g. dietary, entertainment)' },
-        contactEmail: { type: 'string', description: 'Contact email address' },
-        phone: { type: 'string', description: 'Contact phone number' },
-        budget: { type: 'number', description: 'Estimated budget' },
-      },
-      required: [
-        'partner1Name', 'partner2Name', 'weddingDate', 'city', 'theme',
-        'estimatedGuestCount', 'contactEmail', 'phone', 'budget'
-      ],
-    },
+    parameters: schema,
   },
 };
 

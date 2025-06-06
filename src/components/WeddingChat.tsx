@@ -8,16 +8,16 @@ const STARTER_MESSAGE: ChatMessage = {
   content: "Hi there! Congratulations on your upcoming wedding 🎉. To get started, could you tell me the date of your wedding?",
 };
 
-const REQUIRED_FIELDS = [
-  'partner1Name',
-  'partner2Name',
-  'weddingDate',
+const requiredFields = [
+  'partner1name',
+  'partner2name',
+  'weddingdate',
   'city',
   'theme',
-  'estimatedGuestCount',
-  'contactEmail',
+  'estimatedguestcount',
+  'contactemail',
   'phone',
-  'budget',
+  'budget'
 ];
 
 export function WeddingChat() {
@@ -37,7 +37,7 @@ export function WeddingChat() {
   useEffect(() => {
     if (saveSuccess) {
       const timeout = setTimeout(() => {
-        router.push('/tasks');
+        router.push('/setup-password');
       }, 2000);
       return () => clearTimeout(timeout);
     }
@@ -116,7 +116,7 @@ export function WeddingChat() {
       // Extraction for debug only
       const details = extractWeddingDetails([...messages, userMessage, assistantMessage]);
       console.log('Extracted details:', details);
-      const missingFields = REQUIRED_FIELDS.filter(field => !(field in details));
+      const missingFields = requiredFields.filter(field => !(field in details));
       setMissingFields(missingFields);
       const isAllFieldsComplete = missingFields.length === 0;
       setIsComplete(isAllFieldsComplete);
