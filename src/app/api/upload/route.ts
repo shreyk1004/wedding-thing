@@ -77,13 +77,18 @@ export async function POST(request: NextRequest) {
 
     console.log('Public URL:', publicUrl);
 
-    return NextResponse.json({ url: publicUrl });
+    return NextResponse.json({ 
+      url: publicUrl,
+      success: true,
+      path: data.path 
+    });
 
   } catch (error) {
     console.error('Upload API error:', error);
     return NextResponse.json({ 
       error: 'Internal server error',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      details: error instanceof Error ? error.message : 'Unknown error',
+      success: false
     }, { status: 500 });
   }
 } 
