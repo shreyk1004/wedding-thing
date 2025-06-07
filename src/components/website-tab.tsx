@@ -10,6 +10,7 @@ interface WeddingFormData {
   groom: string;
   date: string;
   venue: string;
+  theme: string;
   photos: string[];
   weddingId?: string;
 }
@@ -24,6 +25,7 @@ export function WebsiteTab() {
     groom: "",
     date: "",
     venue: "",
+    theme: "",
     photos: [],
     weddingId: undefined
   });
@@ -58,7 +60,8 @@ export function WebsiteTab() {
             groom: data.partner2name || "",
             date: data.weddingdate || "",
             venue: data.city || "",
-            photos: data.photos || [],
+            theme: data.theme || "",
+            photos: (data.photos || []).filter(url => url && typeof url === 'string' && url.trim() !== ''),
             weddingId: data.id
           });
         }
@@ -77,17 +80,16 @@ export function WebsiteTab() {
   };
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files) {
-      return;
-    }
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
 
-    const files = Array.from(e.target.files);
-    const urls: string[] = [];
-    setUploadError(null);
     setIsUploading(true);
+    setUploadError(null);
 
     try {
-      // Only create a new wedding entry if we don't have a wedding ID
+      const urls: string[] = [];
+      
+      // Create wedding record first if it doesn't exist
       let currentWeddingId = formData.weddingId;
       
       if (!currentWeddingId) {
@@ -97,22 +99,17 @@ export function WebsiteTab() {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            partner1name: formData.bride,
-            partner2name: formData.groom,
-            weddingdate: formData.date,
-            city: formData.venue,
+            partner1name: formData.bride || 'Partner 1',
+            partner2name: formData.groom || 'Partner 2',
+            weddingdate: formData.date || new Date().toISOString(),
+            city: formData.venue || 'To be determined',
+            theme: formData.theme || 'modern',
             photos: [],
-            theme: 'modern', // default value
-            estimatedguestcount: 0, // default value
-            specialrequirements: [], // default value
-            contactemail: '', // default value
-            phone: '', // default value
-            budget: 0, // default value
           }),
         });
 
         if (!response.ok) {
-          throw new Error('Failed to create wedding entry');
+          throw new Error('Failed to create wedding record');
         }
 
         const data = await response.json();
@@ -120,24 +117,37 @@ export function WebsiteTab() {
         setFormData(prev => ({ ...prev, weddingId: data.id }));
       }
 
-      // Upload files using the server-side endpoint
-      for (const file of files) {
-        const formDataUpload = new FormData();
-        formDataUpload.append('file', file);
-        formDataUpload.append('weddingId', currentWeddingId!);
+      // Upload each file
+      for (const file of Array.from(files)) {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('weddingId', currentWeddingId);
 
-        const uploadResponse = await fetch('/api/upload', {
+        const response = await fetch('/api/upload', {
           method: 'POST',
-          body: formDataUpload,
+          body: formData,
         });
 
-        if (!uploadResponse.ok) {
-          const error = await uploadResponse.json();
-          throw new Error(error.error || 'Failed to upload file');
+        const responseData = await response.json();
+
+        if (!response.ok) {
+          throw new Error(responseData.error || `Failed to upload ${file.name}`);
         }
 
-        const { url } = await uploadResponse.json();
-        urls.push(url);
+        const { url } = responseData;
+        // Validate the URL before adding it
+        if (url && typeof url === 'string' && url.trim() !== '') {
+          urls.push(url);
+          console.log(`Successfully uploaded: ${file.name} -> ${url}`);
+        } else {
+          console.error('Invalid URL returned from upload:', responseData);
+          throw new Error(`Invalid URL returned for ${file.name}`);
+        }
+      }
+
+      // Only proceed if we have valid URLs
+      if (urls.length === 0) {
+        throw new Error('No valid photo URLs generated');
       }
 
       // Get current photos from database to avoid race conditions
@@ -151,8 +161,9 @@ export function WebsiteTab() {
         throw new Error('Failed to fetch current photos');
       }
 
-      const currentPhotos = currentWedding.photos || [];
-      const updatedPhotos = [...currentPhotos, ...urls];
+      const currentPhotos = (currentWedding.photos || []).filter(url => url && url.trim() !== '');
+      const validNewUrls = urls.filter(url => url && url.trim() !== '');
+      const updatedPhotos = [...currentPhotos, ...validNewUrls];
 
       // Save photos to the database using the current wedding ID
       const { error: updateError } = await supabase
@@ -182,10 +193,20 @@ export function WebsiteTab() {
 
   const handlePhotoDelete = async (photoUrl: string) => {
     try {
+      // Validate photoUrl before processing
+      if (!photoUrl || typeof photoUrl !== 'string' || photoUrl.trim() === '') {
+        throw new Error('Invalid photo URL');
+      }
+
       // Extract the filename from the URL
       const urlParts = photoUrl.split('/');
       const filename = urlParts[urlParts.length - 1];
       const weddingIdToUse = formData.weddingId;
+      
+      if (!weddingIdToUse) {
+        throw new Error('No wedding ID available');
+      }
+
       const filePath = `${weddingIdToUse}/${filename}`;
 
       // Delete the photo from storage first
@@ -241,6 +262,7 @@ export function WebsiteTab() {
           partner2name: formData.groom,
           weddingdate: formData.date,
           city: formData.venue,
+          theme: formData.theme,
           photos: formData.photos,
         }),
       });
@@ -251,7 +273,7 @@ export function WebsiteTab() {
 
       const data = await response.json();
       
-      // Redirect to preview
+      // Redirect to preview with AI generation
       window.location.href = `/website/preview?id=${data.id}`;
     } catch (error) {
       console.error('Error saving wedding:', error);
@@ -279,7 +301,7 @@ export function WebsiteTab() {
             {formData.weddingId ? 'Edit your wedding website' : 'Create your wedding website'}
           </h1>
           <p className="text-lg max-w-2xl mx-auto leading-relaxed" style={{ color: 'black', paddingBottom: '50px' }}>
-            Your wedding website is the perfect place to share details with your guests. It&apos;s easy to create and customize.
+            Your wedding website is the perfect place to share details with your guests. Our AI will create a beautiful, personalized design based on your style.
           </p>
         </div>
 
@@ -297,6 +319,7 @@ export function WebsiteTab() {
                 onChange={(e) => handleInputChange("bride", e.target.value)}
                 className="w-full px-4 py-4 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 style={{ backgroundColor: 'white', color: 'black', borderRadius: '8px', height: '50px', width: '90%' }}
+                required
               />
             </div>
             <div className="space-y-2">
@@ -309,6 +332,7 @@ export function WebsiteTab() {
                 onChange={(e) => handleInputChange("groom", e.target.value)}
                 className="w-full px-4 py-4 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 style={{ backgroundColor: 'white', color: 'black', borderRadius: '8px', height: '50px', width: '90%' }}
+                required
               />
             </div>
           </div>
@@ -323,20 +347,41 @@ export function WebsiteTab() {
               onChange={(e) => handleInputChange("date", e.target.value)}
               className="w-full max-w-md px-4 py-4 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               style={{ backgroundColor: 'white', color: 'black', borderRadius: '8px', height: '50px', width: '95%' }}
+              required
             />
           </div>
 
           <div className="space-y-2">
             <label className="block text-sm font-medium" style={{ color: 'black', paddingTop: '15px', paddingBottom: '5px' }}>
-              Venue
+              Venue / Location
             </label>
             <input
               type="text"
               value={formData.venue}
               onChange={(e) => handleInputChange("venue", e.target.value)}
+              placeholder="e.g., Los Angeles, CA"
               className="w-full max-w-md px-4 py-4 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               style={{ backgroundColor: 'white', color: 'black', borderRadius: '8px', height: '50px', width: '95%' }}
+              required
             />
+          </div>
+
+          <div className="space-y-2">
+            <label className="block text-sm font-medium" style={{ color: 'black', paddingTop: '15px', paddingBottom: '5px' }}>
+              Wedding Theme / Vibe ✨
+            </label>
+            <input
+              type="text"
+              value={formData.theme}
+              onChange={(e) => handleInputChange("theme", e.target.value)}
+              placeholder="e.g., romantic garden party, modern minimalist, rustic barn, elegant beachside..."
+              className="w-full px-4 py-4 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              style={{ backgroundColor: 'white', color: 'black', borderRadius: '8px', height: '60px', width: '95%' }}
+              required
+            />
+            <p className="text-xs text-gray-600 mt-2">
+              Describe your wedding style - our AI will use this to create a personalized design with matching colors, fonts, and layout!
+            </p>
           </div>
         </div>
 
@@ -344,7 +389,7 @@ export function WebsiteTab() {
           <div className="text-center space-y-4">
             <h3 className="text-2xl font-semibold" style={{ color: 'black' }}>Upload Photos</h3>
             <p className="text-sm max-w-xl mx-auto" style={{ color: 'black' }}>
-              Add photos of you and your partner to personalize your website.
+              Add photos of you and your partner to personalize your website. The first photo will be used as your hero image!
             </p>
             {uploadError && (
               <p className="text-red-500 text-sm">{uploadError}</p>
@@ -372,16 +417,31 @@ export function WebsiteTab() {
           </div>
           {formData.photos && formData.photos.length > 0 && (
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4 max-w-xl mx-auto mt-6">
-              {formData.photos.map((photoUrl, index) => (
-                <div key={index} className="relative aspect-square group">
+              {formData.photos
+                .filter(photoUrl => photoUrl && photoUrl.trim() !== '') // Filter out empty/invalid URLs
+                .map((photoUrl, index) => (
+                <div key={`photo-${index}-${photoUrl}`} className="relative aspect-square group">
                   <Image
                     src={photoUrl}
                     alt={`Preview ${index + 1}`}
                     fill
                     className="object-cover rounded-lg"
                     sizes="(max-width: 768px) 50vw, 33vw"
-                    priority={index < 4}
+                    priority={index < 2} // Only prioritize first 2 images
+                    onError={(e) => {
+                      console.error('Image failed to load:', photoUrl);
+                      // Remove broken image from state
+                      setFormData(prev => ({
+                        ...prev,
+                        photos: prev.photos.filter(url => url !== photoUrl)
+                      }));
+                    }}
                   />
+                  {index === 0 && (
+                    <div className="absolute top-2 left-2 bg-blue-500 text-white px-2 py-1 rounded text-xs font-medium">
+                      Hero Image
+                    </div>
+                  )}
                   <button
                     type="button"
                     onClick={() => handlePhotoDelete(photoUrl)}
@@ -401,11 +461,15 @@ export function WebsiteTab() {
         <div className="flex justify-center pt-8">
           <button
             type="submit"
-            disabled={isUploading}
-            className="px-8 py-3 bg-[#e89830] text-white rounded-lg hover:bg-[#d88a29] transition-colors disabled:opacity-50"
+            disabled={isUploading || !formData.bride || !formData.groom || !formData.date || !formData.venue || !formData.theme}
+            className="px-8 py-4 bg-[#e89830] text-white rounded-lg hover:bg-[#d88a29] transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-lg font-semibold"
           >
-            {isUploading ? 'Saving...' : (formData.weddingId ? 'Update Website' : 'Create Website')}
+            {isUploading ? 'Saving...' : (formData.weddingId ? '🎨 Update & Generate Website' : '🎨 Create AI Wedding Website')}
           </button>
+        </div>
+        
+        <div className="text-center text-sm text-gray-600">
+          <p>✨ Our AI will analyze your theme and create a beautiful, personalized website design just for you!</p>
         </div>
       </form>
     </div>

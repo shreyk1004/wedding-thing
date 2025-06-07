@@ -32,4 +32,8 @@ body {
   .text-balance {
     text-wrap: balance;
   }
+  
+  .bg-radial-gradient {
+    background: radial-gradient(circle, transparent 0%, rgba(0,0,0,0.2) 70%, transparent 100%);
+  }
 }
