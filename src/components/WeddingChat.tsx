@@ -151,14 +151,15 @@ export function WeddingChat() {
   };
 
   return (
-    <div className="flex flex-col h-[600px] w-full max-w-2xl mx-auto bg-[#f4f6fb] rounded-2xl shadow-2xl border border-[#e0e7ef] overflow-hidden">
+    <div className="flex flex-col h-[700px] w-full max-w-3xl mx-auto bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-200/50 overflow-hidden">
       {/* Chat Header */}
-      <div className="bg-gradient-to-r from-[#4f8cff] to-[#6ed0fa] px-6 py-4">
-        <h2 className="text-xl font-bold text-white tracking-tight">Wedding Planning Chat Assistant</h2>
-        <p className="text-sm text-blue-100 mt-1">Let's plan your perfect day together!</p>
+      <div className="px-6 py-4 border-b border-gray-200/50">
+        <h2 className="text-xl font-semibold text-gray-800 tracking-tight">Wedding Planner</h2>
+        <p className="text-sm text-gray-500 mt-1">Let's plan your perfect day together!</p>
       </div>
+
       {/* Chat Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-6 space-y-4 bg-[#f4f6fb]">
+      <div className="flex-1 overflow-y-auto px-6 pt-6 pb-4 space-y-4 bg-transparent">
         {messages.map((message, i) => (
           <div
             key={i}
@@ -167,10 +168,10 @@ export function WeddingChat() {
             }`}
           >
             <div
-              className={`max-w-[80%] px-5 py-3 rounded-2xl shadow-sm text-base font-medium break-words ${
+              className={`max-w-[80%] px-4 py-3 rounded-2xl text-base break-words font-medium ${
                 message.role === 'assistant'
-                  ? 'bg-[#e3f0ff] text-[#1a365d] border border-[#b6d6fa]'
-                  : 'bg-[#f0f1f3] text-[#23272f] border border-[#d1d5db]'
+                  ? 'bg-gray-100 text-gray-800 rounded-bl-none'
+                  : 'bg-rose-500 text-white rounded-br-none'
               }`}
               style={{ wordBreak: 'break-word' }}
             >
@@ -180,39 +181,45 @@ export function WeddingChat() {
         ))}
         <div ref={messagesEndRef} />
       </div>
-      {/* Completion Banner */}
+
+      {/* Completion Banner or Input Form */}
       {isComplete ? (
-        <div className="p-4 bg-green-100 border-t border-green-300 text-center">
-          <p className="text-green-900 font-semibold">
-            🎉 Great! We have all the information we need. Let's move on to planning your perfect wedding!
+        <div className="p-4 bg-green-50 border-t border-green-200 text-center">
+          <p className="text-green-800 font-semibold">
+            🎉 Great! We have all the information we need.
           </p>
-          {isSaving && <p className="text-blue-700 mt-2">Saving your details...</p>}
-          {saveSuccess && <p className="text-green-800 mt-2">Your details have been saved!</p>}
-          {saveError && <p className="text-red-700 mt-2">{saveError}</p>}
-          {missingFields.length > 0 && (
-            <div className="p-2 bg-yellow-100 text-yellow-900 text-sm rounded mt-2">
-              Debug: Missing fields: {missingFields.join(', ')}
-            </div>
-          )}
+          {isSaving && <p className="text-blue-600 mt-2">Saving your details...</p>}
+          {saveSuccess && <p className="text-green-600 mt-2">Your details have been saved!</p>}
+          {saveError && <p className="text-red-600 mt-2">{saveError}</p>}
         </div>
       ) : (
-        <form onSubmit={handleSubmit} className="p-4 bg-white border-t border-[#e0e7ef]">
-          <div className="flex gap-3">
+        <form onSubmit={handleSubmit} className="p-4 bg-white border-t border-gray-200">
+          <div className="flex items-center gap-3">
             <input
               ref={inputRef}
               value={input}
               onChange={handleInputChange}
               placeholder="Type your message..."
-              className="flex-1 p-3 rounded-xl border border-[#cbd5e1] focus:outline-none focus:ring-2 focus:ring-[#4f8cff] text-base bg-[#f9fafb] text-[#23272f] placeholder:text-[#a0aec0]"
+              className="flex-1 p-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 text-base bg-white text-gray-900 placeholder:text-gray-500"
               disabled={isLoading}
               autoComplete="off"
             />
             <button
               type="submit"
               disabled={isLoading || !input.trim()}
-              className="px-6 py-3 rounded-xl bg-gradient-to-r from-[#4f8cff] to-[#6ed0fa] text-white font-bold shadow-md hover:from-[#3578e5] hover:to-[#4fc3f7] focus:outline-none focus:ring-2 focus:ring-[#4f8cff] disabled:opacity-60 transition-all"
+              className="w-11 h-11 flex-shrink-0 flex items-center justify-center rounded-full bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              {isLoading ? 'Sending...' : 'Send'}
+              {isLoading ? (
+                <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 ml-0.5">
+                  <path d="m22 2-7 20-4-9-9-4Z"/>
+                  <path d="m22 2-11 11"/>
+                </svg>
+              )}
             </button>
           </div>
         </form>
