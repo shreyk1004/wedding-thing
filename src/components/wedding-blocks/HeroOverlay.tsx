@@ -104,9 +104,9 @@ export function HeroOverlay({
 
       {/* Content with enhanced visibility */}
       <div className="absolute inset-0 z-30 flex items-center justify-center">
-        <div className="text-center max-w-3xl mx-auto px-6">
+        <div className="text-center w-full max-w-3xl mx-auto px-6">
           {/* Main heading with enhanced shadows and backdrop */}
-          <div className="relative mb-6">
+          <div className="relative flex flex-col items-center justify-center">
             {/* Background blur for text */}
             <div className="absolute inset-0 bg-black/20 backdrop-blur-sm rounded-2xl -m-6 p-6" />
             
@@ -147,37 +147,39 @@ export function HeroOverlay({
             </h1>
           </div>
           
-          <p 
-            className="text-lg md:text-xl lg:text-2xl mb-4 font-medium"
-            style={{ 
-              fontFamily: fonts.body,
-              color: heroPhoto ? '#ffffff' : palette.primary,
-              textShadow: heroPhoto ? '3px 3px 6px rgba(0,0,0,0.8), 1px 1px 2px rgba(0,0,0,0.9)' : 'none'
-            }}
-          >
-            {formatDate(weddingdate)}
-          </p>
-          
-          <p 
-            className="text-base md:text-lg lg:text-xl font-light"
-            style={{ 
-              fontFamily: fonts.body,
-              color: heroPhoto ? '#ffffff' : palette.primary,
-              textShadow: heroPhoto ? '3px 3px 6px rgba(0,0,0,0.8), 1px 1px 2px rgba(0,0,0,0.9)' : 'none',
-              opacity: 0.95
-            }}
-          >
-            {city}
-          </p>
+          <div className="mt-8 space-y-4">
+            <p 
+              className="text-lg md:text-xl lg:text-2xl font-medium"
+              style={{ 
+                fontFamily: fonts.body,
+                color: heroPhoto ? '#ffffff' : palette.primary,
+                textShadow: heroPhoto ? '3px 3px 6px rgba(0,0,0,0.8), 1px 1px 2px rgba(0,0,0,0.9)' : 'none'
+              }}
+            >
+              {formatDate(weddingdate)}
+            </p>
+            
+            <p 
+              className="text-base md:text-lg lg:text-xl font-light"
+              style={{ 
+                fontFamily: fonts.body,
+                color: heroPhoto ? '#ffffff' : palette.primary,
+                textShadow: heroPhoto ? '3px 3px 6px rgba(0,0,0,0.8), 1px 1px 2px rgba(0,0,0,0.9)' : 'none',
+                opacity: 0.95
+              }}
+            >
+              {city}
+            </p>
 
-          {/* Decorative line */}
-          <div 
-            className="w-24 h-0.5 mx-auto mt-6 rounded-full"
-            style={{ 
-              backgroundColor: heroPhoto ? '#ffffff' : palette.accent,
-              boxShadow: heroPhoto ? '0 0 10px rgba(255,255,255,0.6)' : 'none'
-            }}
-          />
+            {/* Decorative line */}
+            <div 
+              className="w-24 h-0.5 mx-auto mt-6 rounded-full"
+              style={{ 
+                backgroundColor: heroPhoto ? '#ffffff' : palette.accent,
+                boxShadow: heroPhoto ? '0 0 10px rgba(255,255,255,0.6)' : 'none'
+              }}
+            />
+          </div>
         </div>
       </div>
     </section>
