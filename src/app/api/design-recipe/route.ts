@@ -15,7 +15,7 @@ function getUserFromMiddleware(request: NextRequest) {
 // Create Supabase client with service role for admin operations
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY!,
   {
     auth: {
       autoRefreshToken: false,
