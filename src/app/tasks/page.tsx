@@ -281,6 +281,22 @@ export default function TasksPage() {
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
+                    <p className="text-sm text-gray-600">Partner 1</p>
+                    <p className="font-medium text-[#181511]">{weddingDetails.partner1name || 'Not specified'}</p>
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-sm text-gray-600">Partner 2</p>
+                    <p className="font-medium text-[#181511]">{weddingDetails.partner2name || 'Not specified'}</p>
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-sm text-gray-600">Wedding Date</p>
+                    <p className="font-medium text-[#181511]">{weddingDetails.weddingdate ? new Date(weddingDetails.weddingdate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' }) : 'Not specified'}</p>
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-sm text-gray-600">Venue/City</p>
+                    <p className="font-medium text-[#181511]">{weddingDetails.city || 'Not specified'}</p>
+                  </div>
+                  <div className="space-y-2">
                     <p className="text-sm text-gray-600">Theme</p>
                     <p className="font-medium text-[#181511]">{weddingDetails.theme || 'Not specified'}</p>
                   </div>
