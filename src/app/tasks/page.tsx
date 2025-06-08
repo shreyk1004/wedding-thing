@@ -3,9 +3,8 @@
 import { useState, useEffect } from 'react';
 import { WeddingHeader } from '@/components/wedding-header';
 import { TaskList } from '@/components/task-list';
-import { supabase, handleSupabaseQuery } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 import { useChatContext } from '@/components/chat-provider';
-import { TaskAIHelpModal } from '@/components/task-ai-help-modal';
 import { Task } from '@/types';
 
 const initialTasks: Task[] = [
@@ -27,6 +26,9 @@ export default function TasksPage() {
   const [error, setError] = useState<string | null>(null);
   const [sessionDebug, setSessionDebug] = useState<any>(null);
   const { openChat } = useChatContext();
+  const [isEditing, setIsEditing] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [updateMessage, setUpdateMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // Debug session status
   useEffect(() => {
@@ -83,6 +85,58 @@ export default function TasksPage() {
     }
     fetchWedding();
   }, []);
+
+  const handleUpdateDetails = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsUpdating(true);
+    setUpdateMessage(null);
+
+    const formData = new FormData(e.currentTarget);
+    const data = {
+      partner1name: formData.get('partner1name') as string,
+      partner2name: formData.get('partner2name') as string,
+      weddingdate: formData.get('weddingdate') as string,
+      city: formData.get('city') as string,
+      theme: formData.get('theme') as string,
+      estimatedguestcount: formData.get('estimatedguestcount') ? parseInt(formData.get('estimatedguestcount') as string, 10) : undefined,
+      budget: formData.get('budget') ? parseFloat(formData.get('budget') as string) : undefined,
+      phone: formData.get('phone') as string,
+      specialrequirements: (formData.get('specialrequirements') as string).split(',').map(s => s.trim()).filter(Boolean),
+    };
+
+    try {
+      console.log('Updating wedding data via API...', data);
+      const response = await fetch('/api/wedding', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+
+      const result = await response.json();
+      console.log('API update response:', result);
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to update wedding details');
+      }
+      
+      if (result.data) {
+        setWeddingDetails(result.data);
+      }
+      setUpdateMessage({ type: 'success', text: 'Wedding details updated successfully!' });
+      setIsEditing(false);
+
+    } catch (error) {
+      console.error('Error updating wedding details:', error);
+      setUpdateMessage({ 
+        type: 'error', 
+        text: error instanceof Error ? error.message : 'Failed to update wedding details. Please try again.' 
+      });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
 
   const completedTasks = tasks.filter(task => task.status === 'done').length;
   const completionPercentage = (completedTasks / tasks.length) * 100;
@@ -148,39 +202,116 @@ export default function TasksPage() {
               completionPercentage={completionPercentage}
             />
             <div className="px-4 py-6 bg-white rounded-xl shadow-sm border border-gray-200">
-              <h3 className="text-lg font-semibold text-[#181511] mb-4">Wedding Details</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <p className="text-sm text-gray-600">Theme</p>
-                  <p className="font-medium text-[#181511]">{weddingDetails.theme || 'Not specified'}</p>
-                </div>
-                <div className="space-y-2">
-                  <p className="text-sm text-gray-600">Guest Count</p>
-                  <p className="font-medium text-[#181511]">{weddingDetails.estimatedguestcount || 'Not specified'} guests</p>
-                </div>
-                <div className="space-y-2">
-                  <p className="text-sm text-gray-600">Budget</p>
-                  <p className="font-medium text-[#181511]">
-                    {weddingDetails.budget ? `$${weddingDetails.budget.toLocaleString()}` : 'Not specified'}
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <p className="text-sm text-gray-600">Special Requirements</p>
-                  <p className="font-medium text-[#181511]">
-                    {weddingDetails.specialrequirements?.length 
-                      ? weddingDetails.specialrequirements.join(', ')
-                      : 'None specified'}
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <p className="text-sm text-gray-600">Contact Email</p>
-                  <p className="font-medium text-[#181511]">{weddingDetails.contactemail || 'Not specified'}</p>
-                </div>
-                <div className="space-y-2">
-                  <p className="text-sm text-gray-600">Phone</p>
-                  <p className="font-medium text-[#181511]">{weddingDetails.phone || 'Not specified'}</p>
-                </div>
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold text-[#181511]">Wedding Details</h3>
+                {!isEditing && weddingDetails && (
+                  <button
+                    onClick={() => { setIsEditing(true); setUpdateMessage(null); }}
+                    className="px-4 py-1.5 text-sm font-medium bg-[#f9f6f2] text-[#181511] rounded-lg hover:bg-[#f0ebe4] border border-[#f0ebe4] transition-colors"
+                  >
+                    Edit
+                  </button>
+                )}
               </div>
+
+              {updateMessage && !isEditing && (
+                <div className={`p-3 mb-4 rounded-lg border text-sm ${
+                  updateMessage.type === 'success'
+                    ? 'bg-green-50 border-green-200 text-green-800'
+                    : 'bg-red-50 border-red-200 text-red-800'
+                }`}>
+                  {updateMessage.text}
+                </div>
+              )}
+
+              {isEditing ? (
+                <form onSubmit={handleUpdateDetails}>
+                  {updateMessage && (
+                    <div className={`p-3 mb-4 rounded-lg border text-sm ${
+                      updateMessage.type === 'success'
+                        ? 'bg-green-50 border-green-200 text-green-800'
+                        : 'bg-red-50 border-red-200 text-red-800'
+                    }`}>
+                      {updateMessage.text}
+                    </div>
+                  )}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-sm font-medium text-[#181511] mb-2">Partner 1 Name</label>
+                        <input type="text" name="partner1name" defaultValue={weddingDetails?.partner1name || ""} placeholder="Enter partner 1 name" className="w-full px-3 py-2 border border-[#e5e1dc] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e89830] focus:border-transparent"/>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-[#181511] mb-2">Partner 2 Name</label>
+                        <input type="text" name="partner2name" defaultValue={weddingDetails?.partner2name || ""} placeholder="Enter partner 2 name" className="w-full px-3 py-2 border border-[#e5e1dc] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e89830] focus:border-transparent"/>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-[#181511] mb-2">Wedding Date</label>
+                        <input type="date" name="weddingdate" defaultValue={weddingDetails?.weddingdate ? new Date(weddingDetails.weddingdate).toISOString().split('T')[0] : ""} className="w-full px-3 py-2 border border-[#e5e1dc] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e89830] focus:border-transparent"/>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-[#181511] mb-2">Venue/City</label>
+                        <input type="text" name="city" defaultValue={weddingDetails?.city || ""} placeholder="Enter venue or city name" className="w-full px-3 py-2 border border-[#e5e1dc] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e89830] focus:border-transparent"/>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-[#181511] mb-2">Theme</label>
+                        <input type="text" name="theme" defaultValue={weddingDetails?.theme || ""} placeholder="Enter wedding theme" className="w-full px-3 py-2 border border-[#e5e1dc] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e89830] focus:border-transparent"/>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-[#181511] mb-2">Estimated Guest Count</label>
+                        <input type="number" name="estimatedguestcount" defaultValue={weddingDetails?.estimatedguestcount || ""} placeholder="Enter estimated guest count" className="w-full px-3 py-2 border border-[#e5e1dc] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e89830] focus:border-transparent"/>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-[#181511] mb-2">Budget</label>
+                        <input type="number" name="budget" defaultValue={weddingDetails?.budget || ""} placeholder="Enter wedding budget" className="w-full px-3 py-2 border border-[#e5e1dc] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e89830] focus:border-transparent"/>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-[#181511] mb-2">Phone</label>
+                        <input type="tel" name="phone" defaultValue={weddingDetails?.phone || ""} placeholder="Enter phone number" className="w-full px-3 py-2 border border-[#e5e1dc] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e89830] focus:border-transparent"/>
+                    </div>
+                    <div className="md:col-span-2">
+                        <label className="block text-sm font-medium text-[#181511] mb-2">Special Requirements</label>
+                        <input type="text" name="specialrequirements" defaultValue={weddingDetails?.specialrequirements?.join(', ') || ""} placeholder="e.g. wheelchair access, dietary restrictions" className="w-full px-3 py-2 border border-[#e5e1dc] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e89830] focus:border-transparent"/>
+                    </div>
+                  </div>
+                  <div className="flex justify-end gap-3 mt-6">
+                    <button type="button" onClick={() => { setIsEditing(false); setUpdateMessage(null); }} className="px-6 py-2 rounded-lg font-medium transition-colors bg-gray-100 text-[#181511] hover:bg-gray-200">Cancel</button>
+                    <button type="submit" disabled={isUpdating} className={`px-6 py-2 rounded-lg font-medium transition-colors ${isUpdating ? 'bg-gray-400 text-gray-700 cursor-not-allowed' : 'bg-[#e89830] text-[#181511] hover:bg-[#d88a29]'}`}>{isUpdating ? 'Saving...' : 'Save Changes'}</button>
+                  </div>
+                </form>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <p className="text-sm text-gray-600">Theme</p>
+                    <p className="font-medium text-[#181511]">{weddingDetails.theme || 'Not specified'}</p>
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-sm text-gray-600">Guest Count</p>
+                    <p className="font-medium text-[#181511]">{weddingDetails.estimatedguestcount || 'Not specified'} guests</p>
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-sm text-gray-600">Budget</p>
+                    <p className="font-medium text-[#181511]">
+                      {weddingDetails.budget ? `$${weddingDetails.budget.toLocaleString()}` : 'Not specified'}
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-sm text-gray-600">Special Requirements</p>
+                    <p className="font-medium text-[#181511]">
+                      {weddingDetails.specialrequirements?.length
+                        ? weddingDetails.specialrequirements.join(', ')
+                        : 'None specified'}
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-sm text-gray-600">Contact Email</p>
+                    <p className="font-medium text-[#181511]">{weddingDetails.contactemail || 'Not specified'}</p>
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-sm text-gray-600">Phone</p>
+                    <p className="font-medium text-[#181511]">{weddingDetails.phone || 'Not specified'}</p>
+                  </div>
+                </div>
+              )}
             </div>
           </>
         )}

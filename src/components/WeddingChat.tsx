@@ -162,7 +162,7 @@ export function WeddingChat() {
   };
 
   return (
-    <div className="flex flex-col h-[700px] w-full max-w-3xl mx-auto bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-200/50 overflow-hidden">
+    <div className="flex flex-col h-[700px] w-full max-w-3xl bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-200/50 overflow-hidden">
       {/* Chat Header */}
       <div className="px-6 py-4 border-b border-gray-200/50">
         <h2 className="text-xl font-semibold text-gray-800 tracking-tight">Wedding Planner</h2>

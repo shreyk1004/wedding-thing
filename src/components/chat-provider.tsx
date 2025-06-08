@@ -41,14 +41,16 @@ export function ChatProvider({ children }: ChatProviderProps) {
 
   return (
     <ChatContext.Provider value={{ openChat, isOpen, closeChat, currentTask }}>
-      <div className={`transition-all duration-300 ${isOpen ? 'mr-96' : 'mr-0'}`}>
-        {children}
+      <div className="relative">
+        <div className={`transition-all duration-300 ${isOpen ? 'pr-96' : 'pr-0'}`}>
+          {children}
+        </div>
+        <AIChatSidebar
+          isOpen={isOpen}
+          onClose={closeChat}
+          initialTask={currentTask || undefined}
+        />
       </div>
-      <AIChatSidebar
-        isOpen={isOpen}
-        onClose={closeChat}
-        initialTask={currentTask || undefined}
-      />
     </ChatContext.Provider>
   );
 } 

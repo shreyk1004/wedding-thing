@@ -296,40 +296,34 @@ export function AIChatSidebar({ isOpen, onClose, initialTask }: AIChatSidebarPro
 
   if (!isOpen) return null;
 
+  if (isMinimized) {
+    return (
+      <button
+        onClick={() => setIsMinimized(false)}
+        className="fixed top-20 right-0 z-50 p-3 bg-gradient-to-br from-blue-500 to-purple-600 rounded-l-full shadow-lg text-white hover:from-blue-600 hover:to-purple-700 transition-all duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transform hover:scale-105"
+        title="Expand Chat"
+      >
+        <Brain className="w-6 h-6" />
+      </button>
+    );
+  }
+
   return (
-    <>
-      {/* Backdrop overlay */}
-      <div 
-        className="fixed inset-0 bg-black bg-opacity-50 z-40 transition-opacity duration-300"
-        onClick={onClose}
-      />
-      
-      {/* Sidebar */}
-      <div 
-        className={`fixed right-0 top-0 h-full bg-white shadow-2xl border-l-2 border-gray-400 z-50 transition-all duration-300 ${
-          isMinimized ? 'w-16' : 'w-96'
-        }`} 
+    <div
+        className={`fixed right-0 top-0 h-full bg-white shadow-2xl border-l-2 border-gray-400 z-50 transition-all duration-300 w-96`} 
         style={{ 
-          right: 0,
-          maxWidth: isMinimized ? '64px' : '384px',
-          minWidth: isMinimized ? '64px' : '384px',
-          width: isMinimized ? '64px' : '384px',
-          backgroundColor: '#ffffff',
           boxShadow: '-4px 0 20px rgba(0, 0, 0, 0.25)'
         }}
-        onClick={(e) => e.stopPropagation()}
-      >
+    >
       {/* Header */}
       <div className="bg-gradient-to-r from-blue-600 to-purple-700 p-4 flex items-center justify-between shadow-lg">
         <div className="flex items-center gap-2">
           <Brain className="w-5 h-5 text-white" />
-          {!isMinimized && (
-            <h3 className="text-white font-semibold">AI Wedding Assistant</h3>
-          )}
+          <h3 className="text-white font-semibold">AI Wedding Assistant</h3>
         </div>
         <div className="flex gap-2">
           <button
-            onClick={() => setIsMinimized(!isMinimized)}
+            onClick={() => setIsMinimized(true)}
             className="text-white hover:text-blue-200 transition-colors"
           >
             <Minimize2 className="w-4 h-4" />
@@ -343,134 +337,131 @@ export function AIChatSidebar({ isOpen, onClose, initialTask }: AIChatSidebarPro
         </div>
       </div>
 
-      {!isMinimized && (
-        <>
-          {/* Chat Tabs */}
-          {chatSessions.length > 0 && (
-            <div className="bg-gray-50 border-b border-gray-200 p-2 shadow-sm" style={{ backgroundColor: '#f9fafb' }}>
-              <div className="flex gap-1 overflow-x-auto">
-                {chatSessions.map((session) => (
-                  <button
-                    key={session.id}
-                    onClick={() => setActiveChatId(session.id)}
-                    className={`flex items-center gap-1 px-3 py-1 rounded text-xs font-medium transition-colors ${
-                      session.id === activeChatId
-                        ? 'bg-blue-500 text-white'
-                        : 'bg-white text-gray-800 hover:bg-gray-100 border border-gray-200'
-                    }`}
+      <>
+        {/* Chat Tabs */}
+        {chatSessions.length > 0 && (
+          <div className="bg-gray-50 border-b border-gray-200 p-2 shadow-sm" style={{ backgroundColor: '#f9fafb' }}>
+            <div className="flex gap-1 overflow-x-auto">
+              {chatSessions.map((session) => (
+                <button
+                  key={session.id}
+                  onClick={() => setActiveChatId(session.id)}
+                  className={`flex items-center gap-1 px-3 py-1 rounded text-xs font-medium transition-colors ${
+                    session.id === activeChatId
+                      ? 'bg-blue-500 text-white'
+                      : 'bg-white text-gray-800 hover:bg-gray-100 border border-gray-200'
+                  }`}
+                >
+                  <MessageSquare className="w-3 h-3" />
+                  <span className="truncate max-w-20 text-inherit">
+                    {session.task.title}
+                  </span>
+                  <X 
+                    className="w-3 h-3 ml-1 hover:bg-black/10 rounded text-inherit"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      closeChat(session.id);
+                    }}
+                  />
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Chat Content */}
+        <div className="flex-1 flex flex-col overflow-hidden bg-white" style={{ height: 'calc(100vh - 120px)', backgroundColor: '#ffffff' }}>
+          {activeChat ? (
+            <>
+              {/* Messages */}
+              <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-4 bg-white" style={{ backgroundColor: '#ffffff' }}>
+                {activeChat.messages.map((message) => (
+                  <div
+                    key={message.id}
+                    className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
-                    <MessageSquare className="w-3 h-3" />
-                    <span className="truncate max-w-20 text-inherit">
-                      {session.task.title}
-                    </span>
-                    <X 
-                      className="w-3 h-3 ml-1 hover:bg-black/10 rounded text-inherit"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        closeChat(session.id);
-                      }}
-                    />
-                  </button>
+                    <div
+                      className={`max-w-[80%] rounded-lg p-3 word-wrap break-words ${
+                        message.type === 'user'
+                          ? 'bg-blue-500 text-white'
+                          : 'bg-gray-100 text-gray-900'
+                      }`}
+                      style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}
+                    >
+                      <div
+                        dangerouslySetInnerHTML={{
+                          __html: formatMessageContent(message.content, message.type)
+                        }}
+                      />
+                      {message.toolsUsed && message.toolsUsed.length > 0 && (
+                        <div 
+                          className="mt-2 text-xs font-medium"
+                          style={{ 
+                            color: message.type === 'user' ? '#bfdbfe' : '#4b5563'
+                          }}
+                        >
+                          🔧 Tools used: {message.toolsUsed.join(', ')}
+                        </div>
+                      )}
+                      <div 
+                        className="text-xs mt-1"
+                        style={{ 
+                          color: message.type === 'user' ? '#bfdbfe' : '#6b7280'
+                        }}
+                      >
+                        {message.timestamp.toLocaleTimeString()}
+                      </div>
+                    </div>
+                  </div>
                 ))}
+                
+                {activeChat.isLoading && (
+                  <div className="flex justify-start">
+                    <div className="bg-gray-100 rounded-lg p-3 border border-gray-200">
+                      <div className="flex items-center gap-2">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
+                        <span style={{ color: '#374151' }} className="text-sm font-medium">AI is thinking...</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                <div ref={messagesEndRef} />
+              </div>
+
+              {/* Input */}
+              <div className="border-t border-gray-200 p-4 bg-white" style={{ backgroundColor: '#ffffff' }}>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={inputMessage}
+                    onChange={(e) => setInputMessage(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && sendMessage(activeChatId, inputMessage)}
+                    placeholder="Ask about this task..."
+                    className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-800 placeholder-gray-500 bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    disabled={activeChat.isLoading}
+                  />
+                  <button
+                    onClick={() => sendMessage(activeChatId, inputMessage)}
+                    disabled={!inputMessage.trim() || activeChat.isLoading}
+                    className="bg-blue-500 text-white rounded-lg px-3 py-2 hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed border border-blue-500"
+                  >
+                    <Send className="w-4 h-4 text-white" />
+                  </button>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="flex-1 flex items-center justify-center text-gray-600">
+              <div className="text-center">
+                <MessageSquare className="w-12 h-12 mx-auto mb-2 opacity-50 text-gray-400" />
+                <p className="text-gray-700 font-medium">No active chats</p>
+                <p className="text-sm text-gray-500">Click AI Help on a task to start</p>
               </div>
             </div>
           )}
-
-          {/* Chat Content */}
-          <div className="flex-1 flex flex-col overflow-hidden bg-white" style={{ height: 'calc(100vh - 120px)', backgroundColor: '#ffffff' }}>
-            {activeChat ? (
-              <>
-                {/* Messages */}
-                <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-4 bg-white" style={{ backgroundColor: '#ffffff' }}>
-                  {activeChat.messages.map((message) => (
-                    <div
-                      key={message.id}
-                      className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
-                    >
-                      <div
-                        className={`max-w-[80%] rounded-lg p-3 word-wrap break-words ${
-                          message.type === 'user'
-                            ? 'bg-blue-500 text-white'
-                            : 'bg-gray-100 text-gray-900'
-                        }`}
-                        style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}
-                      >
-                        <div
-                          dangerouslySetInnerHTML={{
-                            __html: formatMessageContent(message.content, message.type)
-                          }}
-                        />
-                        {message.toolsUsed && message.toolsUsed.length > 0 && (
-                          <div 
-                            className="mt-2 text-xs font-medium"
-                            style={{ 
-                              color: message.type === 'user' ? '#bfdbfe' : '#4b5563'
-                            }}
-                          >
-                            🔧 Tools used: {message.toolsUsed.join(', ')}
-                          </div>
-                        )}
-                        <div 
-                          className="text-xs mt-1"
-                          style={{ 
-                            color: message.type === 'user' ? '#bfdbfe' : '#6b7280'
-                          }}
-                        >
-                          {message.timestamp.toLocaleTimeString()}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  
-                  {activeChat.isLoading && (
-                    <div className="flex justify-start">
-                      <div className="bg-gray-100 rounded-lg p-3 border border-gray-200">
-                        <div className="flex items-center gap-2">
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
-                          <span style={{ color: '#374151' }} className="text-sm font-medium">AI is thinking...</span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  
-                  <div ref={messagesEndRef} />
-                </div>
-
-                {/* Input */}
-                <div className="border-t border-gray-200 p-4 bg-white" style={{ backgroundColor: '#ffffff' }}>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={inputMessage}
-                      onChange={(e) => setInputMessage(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && sendMessage(activeChatId, inputMessage)}
-                      placeholder="Ask about this task..."
-                      className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-800 placeholder-gray-500 bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      disabled={activeChat.isLoading}
-                    />
-                    <button
-                      onClick={() => sendMessage(activeChatId, inputMessage)}
-                      disabled={!inputMessage.trim() || activeChat.isLoading}
-                      className="bg-blue-500 text-white rounded-lg px-3 py-2 hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed border border-blue-500"
-                    >
-                      <Send className="w-4 h-4 text-white" />
-                    </button>
-                  </div>
-                </div>
-              </>
-            ) : (
-              <div className="flex-1 flex items-center justify-center text-gray-600">
-                <div className="text-center">
-                  <MessageSquare className="w-12 h-12 mx-auto mb-2 opacity-50 text-gray-400" />
-                  <p className="text-gray-700 font-medium">No active chats</p>
-                  <p className="text-sm text-gray-500">Click AI Help on a task to start</p>
-                </div>
-              </div>
-            )}
-          </div>
-        </>
-      )}
+        </div>
+      </>
     </div>
-    </>
   );
 } 
