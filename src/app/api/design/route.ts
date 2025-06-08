@@ -1,10 +1,9 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
-import { NextResponse } from 'next/server';
+import { NextResponse, NextRequest } from 'next/server';
 import { OpenAI } from 'openai';
 import { z } from 'zod';
 import { AVAILABLE_FONTS } from '@/types/design';
 import type { WeddingDesign } from '@/types/design';
+import { getSupabaseClient } from '@/lib/supabase';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
@@ -14,13 +13,19 @@ const DesignRequestSchema = z.object({
   weddingId: z.string().uuid()
 });
 
-export async function POST(request: Request) {
+// Helper function to get user from middleware header
+function getUserFromMiddleware(request: NextRequest) {
+  const userHeader = request.headers.get('x-user-id');
+  if (!userHeader) return null;
+  
+  return { id: userHeader };
+}
+
+export async function POST(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient({ cookies });
-    
-    // Verify authentication
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
+    // Get user ID from middleware header
+    const user = getUserFromMiddleware(request);
+    if (!user) {
       return new NextResponse('Unauthorized', { status: 401 });
     }
 
@@ -28,11 +33,13 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { weddingId } = DesignRequestSchema.parse(body);
 
-    // Get wedding details
-    const { data: wedding, error } = await supabase
-      .from('wedding')
+    // Get wedding details using admin client
+    const supabaseAdmin = getSupabaseClient(true);
+    const { data: wedding, error } = await supabaseAdmin
+      .from('weddings')
       .select('*')
       .eq('id', weddingId)
+      .eq('user_id', user.id) // Ensure user owns this wedding
       .single();
 
     if (error || !wedding) {
@@ -90,12 +97,13 @@ export async function POST(request: Request) {
     const design = JSON.parse(content) as WeddingDesign;
 
     // Store the design in Supabase
-    const { error: updateError } = await supabase
-      .from('wedding')
+    const { error: updateError } = await supabaseAdmin
+      .from('weddings')
       .update({
         design: design
       })
-      .eq('id', weddingId);
+      .eq('id', weddingId)
+      .eq('user_id', user.id); // Ensure user owns this wedding
 
     if (updateError) {
       return new NextResponse('Failed to save design', { status: 500 });

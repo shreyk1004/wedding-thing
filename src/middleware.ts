@@ -1,6 +1,54 @@
-import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
+
+// Environment variables for Supabase
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
+// Helper function to extract auth token from cookies
+function getAuthToken(request: NextRequest): string | null {
+  const cookies = request.cookies;
+  
+  // Try different possible cookie names
+  const possibleCookieNames = [
+    'sb-atwcovxfbxxdrecjsfyy-auth-token',
+    'supabase-auth-token',
+    'supabase.auth.token',
+    'sb-auth-token'
+  ];
+  
+  for (const cookieName of possibleCookieNames) {
+    const cookie = cookies.get(cookieName);
+    if (cookie?.value) {
+      try {
+        const parsed = JSON.parse(cookie.value);
+        return parsed.access_token || parsed;
+      } catch {
+        return cookie.value;
+      }
+    }
+  }
+  
+  return null;
+}
+
+// Helper function to verify JWT token
+async function verifySession(token: string) {
+  try {
+    const supabase = createClient(supabaseUrl, supabaseAnonKey);
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+    
+    if (error || !user) return null;
+    
+    return {
+      user,
+      expires_at: Date.now() / 1000 + 3600 // Assume 1 hour expiry
+    };
+  } catch {
+    return null;
+  }
+}
 
 export async function middleware(req: NextRequest) {
   const res = NextResponse.next();
@@ -21,21 +69,18 @@ export async function middleware(req: NextRequest) {
   }
   
   try {
-    const supabase = createMiddlewareClient({ req, res });
-
-    // Try to get session with retries
+    // Get auth token from cookies
+    const authToken = getAuthToken(req);
     let session = null;
     let sessionError = null;
     
-    for (let i = 0; i < 2; i++) {
-      const { data, error } = await supabase.auth.getSession();
-      session = data.session;
-      sessionError = error;
-      
-      if (session || !error) break;
-      
-      // Wait a bit before retry
-      await new Promise(resolve => setTimeout(resolve, 100));
+    if (authToken) {
+      session = await verifySession(authToken);
+      if (!session) {
+        sessionError = { message: 'Invalid or expired token' };
+      }
+    } else {
+      sessionError = { message: 'No auth token found' };
     }
     
     // Debug logging (only for app routes)
@@ -101,6 +146,14 @@ export async function middleware(req: NextRequest) {
       console.log(`🚫 REDIRECTING: ${pathname} → /chat - No session`);
       const redirectUrl = new URL('/chat', req.url);
       return NextResponse.redirect(redirectUrl);
+    }
+
+    // For API routes with valid session, add user ID header to avoid cookies issue
+    if (pathname.startsWith('/api/') && session?.user?.id) {
+      const response = NextResponse.next();
+      response.headers.set('x-user-id', session.user.id);
+      console.log(`✅ ALLOWING: ${pathname} - Added user ID header`);
+      return response;
     }
 
     console.log(`✅ ALLOWING: ${pathname}`);

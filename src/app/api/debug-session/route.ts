@@ -1,16 +1,20 @@
-import { NextResponse } from 'next/server';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
+import { NextResponse, NextRequest } from 'next/server';
 
-export async function GET() {
-  const supabase = createRouteHandlerClient({ cookies });
-  const { data: { session }, error } = await supabase.auth.getSession();
+// Helper function to get user from middleware header
+function getUserFromMiddleware(request: NextRequest) {
+  const userHeader = request.headers.get('x-user-id');
+  if (!userHeader) return null;
+  
+  return { id: userHeader };
+}
+
+export async function GET(request: NextRequest) {
+  const user = getUserFromMiddleware(request);
   
   return NextResponse.json({
-    session: session ? {
-      user: session.user,
-      expires_at: session.expires_at
+    user: user ? {
+      id: user.id
     } : null,
-    error: error?.message || null
+    message: user ? 'User authenticated via middleware' : 'No user found'
   });
 } 
