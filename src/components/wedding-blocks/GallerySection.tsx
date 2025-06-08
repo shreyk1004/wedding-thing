@@ -1,5 +1,4 @@
 import React from 'react';
-import Image from 'next/image';
 import { Block } from './Block';
 
 interface GallerySectionProps {
@@ -177,13 +176,10 @@ export function GallerySection({
                 key={`gallery-${index}-${photo}`} 
                 className={`${aspectClass} overflow-hidden rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 relative group cursor-pointer bg-gray-100`}
               >
-                <Image
+                <img
                   src={photo}
                   alt={`${partner1name} & ${partner2name} - Gallery ${index + 1}`}
-                  fill
-                  className="object-cover group-hover:scale-110 transition-transform duration-500"
-                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
-                  unoptimized={true}
+                  className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                   onLoad={() => console.log(`Gallery image ${index + 1} loaded successfully`)}
                   onError={(e) => {
                     console.error(`Gallery image ${index + 1} failed to load:`, photo, e);

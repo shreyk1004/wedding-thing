@@ -3,10 +3,19 @@ import { createClient } from '@supabase/supabase-js';
 import OpenAI from 'openai';
 import { z } from 'zod';
 
-// Create Supabase client with anon key
+// Get user from middleware headers
+function getUserFromMiddleware(request: NextRequest) {
+  const userId = request.headers.get('x-user-id');
+  if (!userId) {
+    return null;
+  }
+  return { id: userId };
+}
+
+// Create Supabase client with service role for admin operations
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
   {
     auth: {
       autoRefreshToken: false,
@@ -49,6 +58,14 @@ export async function POST(request: NextRequest) {
   try {
     console.log('=== Design Recipe API Called ===');
     
+    // Get user from middleware headers (authentication check)
+    const user = getUserFromMiddleware(request);
+    if (!user) {
+      console.log('❌ No authenticated user found');
+      return new NextResponse('Unauthorized', { status: 401 });
+    }
+    console.log('✅ Authenticated user:', user.id);
+    
     // Check environment variables
     console.log('Environment check:');
     console.log('- OPENAI_API_KEY exists:', !!process.env.OPENAI_API_KEY);
@@ -58,11 +75,12 @@ export async function POST(request: NextRequest) {
     const { weddingId } = DesignRecipeRequestSchema.parse(body);
     console.log('Wedding ID:', weddingId);
 
-    // Fetch wedding data from Supabase
+    // Fetch wedding data from Supabase with user ownership check
     const { data: wedding, error } = await supabase
       .from('weddings')
       .select('*')
       .eq('id', weddingId)
+      .eq('user_id', user.id) // Ensure user owns this wedding
       .single();
 
     if (error || !wedding) {
@@ -183,7 +201,8 @@ Return ONLY valid JSON in this exact format:
     const { error: updateError } = await supabase
       .from('weddings')
       .update({ design: validatedRecipe })
-      .eq('id', weddingId);
+      .eq('id', weddingId)
+      .eq('user_id', user.id); // Ensure user owns this wedding
 
     if (updateError) {
       console.error('Failed to save design recipe:', updateError);

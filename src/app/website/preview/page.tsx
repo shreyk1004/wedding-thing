@@ -61,10 +61,12 @@ function WebsitePreviewContent() {
   const handleRegenerateDesign = async () => {
     if (!weddingData) return;
     
+    console.log('🎨 Starting design regeneration for wedding:', weddingData.id);
     setIsRegenerating(true);
     
     try {
       // Generate a new design using the wedding ID
+      console.log('🔄 Calling design-recipe API...');
       const response = await fetch('/api/design-recipe', {
         method: 'POST',
         headers: {
@@ -75,16 +77,25 @@ function WebsitePreviewContent() {
         }),
       });
 
+      console.log('📡 Design API response status:', response.status);
+      
       if (response.ok) {
+        const result = await response.json();
+        console.log('✅ Design regenerated successfully:', result);
+        
         // Refetch wedding data to get the new design
+        console.log('🔄 Refetching wedding data...');
         await fetchUserWeddingData();
+        console.log('✅ Wedding data refetched successfully');
       } else {
-        console.error('Failed to regenerate design:', response.statusText);
+        const errorText = await response.text();
+        console.error('❌ Failed to regenerate design:', response.status, errorText);
       }
     } catch (err) {
-      console.error('Error regenerating design:', err);
+      console.error('❌ Error regenerating design:', err);
     } finally {
       setIsRegenerating(false);
+      console.log('🏁 Regeneration process completed');
     }
   };
 
