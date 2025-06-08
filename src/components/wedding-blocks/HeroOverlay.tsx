@@ -107,9 +107,6 @@ export function HeroOverlay({
         <div className="text-center w-full max-w-3xl mx-auto px-6">
           {/* Main heading with enhanced shadows and backdrop */}
           <div className="relative flex flex-col items-center justify-center">
-            {/* Background blur for text */}
-            <div className="absolute inset-0 bg-black/20 backdrop-blur-sm rounded-2xl -m-6 p-6" />
-            
             <h1 
               className="relative text-4xl md:text-6xl lg:text-7xl font-bold leading-tight"
               style={{ 

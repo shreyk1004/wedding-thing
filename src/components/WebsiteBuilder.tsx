@@ -64,6 +64,7 @@ export function WebsiteBuilder({ weddingData, isGenerating = false, onRegenerate
   const [designRecipe, setDesignRecipe] = useState<DesignRecipe | null>(getInitialDesign());
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isDebugOpen, setIsDebugOpen] = useState(true);
 
   const createFallbackDesign = (): DesignRecipe => {
     return {
@@ -372,52 +373,93 @@ export function WebsiteBuilder({ weddingData, isGenerating = false, onRegenerate
 
       {/* Debug Info - Fixed to bottom right of viewport */}
       {process.env.NODE_ENV === 'development' && designRecipe && (
-        <div 
-          className="fixed z-50"
-          style={{ 
-            bottom: '16px', 
-            right: '16px',
-            position: 'fixed',
-            backgroundColor: 'rgba(0, 0, 0, 0.9)',
-            color: 'white',
-            padding: '12px',
-            borderRadius: '8px',
-            fontSize: '12px',
-            maxWidth: '320px',
-            backdropFilter: 'blur(4px)',
-            border: '1px solid rgba(255, 255, 255, 0.1)'
-          }}
-        >
-          <div style={{ fontWeight: 'bold', marginBottom: '8px', color: '#4ade80' }}>
-            Design Recipe:
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            <div><span style={{ color: '#93c5fd' }}>Hero:</span> {designRecipe.hero?.style}</div>
-            <div><span style={{ color: '#93c5fd' }}>Accent:</span> {designRecipe.accent?.preset}</div>
-            <div><span style={{ color: '#93c5fd' }}>Layout:</span> {designRecipe.layout?.join(' → ')}</div>
-            <div><span style={{ color: '#93c5fd' }}>Colors:</span> {designRecipe.palette?.primary}</div>
-          </div>
-          
-          {weddingData.photos && weddingData.photos.length > 0 && (
-            <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #4b5563' }}>
-              <div style={{ fontWeight: 'bold', marginBottom: '4px', color: '#4ade80' }}>
-                Photo Distribution:
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <div>• Hero: Photo 1</div>
-                {weddingData.photos.length > 1 && (
-                  <div>• Story: Photos {weddingData.photos.length > 4 ? '2-4' : `2-${Math.min(4, weddingData.photos.length)}`}</div>
-                )}
-                {weddingData.photos.length > 4 && (
-                  <div>• Gallery: Photos 5-{weddingData.photos.length}</div>
-                )}
-                <div style={{ color: '#d1d5db', marginTop: '4px' }}>
-                  Total: {weddingData.photos.length} photos
+        <>
+          {/* Minimized Debug Icon */}
+          {!isDebugOpen && (
+            <div 
+              className="fixed z-50 cursor-pointer hover:scale-110 transition-transform"
+              style={{ 
+                bottom: '16px', 
+                right: '16px',
+                position: 'fixed',
+                backgroundColor: 'rgba(0, 0, 0, 0.9)',
+                color: 'white',
+                padding: '12px',
+                borderRadius: '50%',
+                fontSize: '16px',
+                backdropFilter: 'blur(4px)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                width: '48px',
+                height: '48px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+              onClick={() => setIsDebugOpen(true)}
+              title="Show debug info"
+            >
+              🎨
+            </div>
+          )}
+
+          {/* Expanded Debug Panel */}
+          {isDebugOpen && (
+            <div 
+              className="fixed z-50"
+              style={{ 
+                bottom: '16px', 
+                right: '16px',
+                position: 'fixed',
+                backgroundColor: 'rgba(0, 0, 0, 0.9)',
+                color: 'white',
+                padding: '12px',
+                borderRadius: '8px',
+                fontSize: '12px',
+                maxWidth: '320px',
+                backdropFilter: 'blur(4px)',
+                border: '1px solid rgba(255, 255, 255, 0.1)'
+              }}
+            >
+              {/* Header with close button */}
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center',
+                marginBottom: '8px'
+              }}>
+                <div style={{ fontWeight: 'bold', color: '#4ade80' }}>
+                  Design Recipe:
                 </div>
+                <button
+                  onClick={() => setIsDebugOpen(false)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#ffffff',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    padding: '2px 6px',
+                    borderRadius: '4px',
+                    opacity: 0.7,
+                    transition: 'opacity 0.2s'
+                  }}
+                  onMouseEnter={(e) => (e.target as HTMLButtonElement).style.opacity = '1'}
+                  onMouseLeave={(e) => (e.target as HTMLButtonElement).style.opacity = '0.7'}
+                  title="Minimize"
+                >
+                  ✕
+                </button>
+              </div>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <div><span style={{ color: '#93c5fd' }}>Hero:</span> {designRecipe.hero?.style}</div>
+                <div><span style={{ color: '#93c5fd' }}>Accent:</span> {designRecipe.accent?.preset}</div>
+                <div><span style={{ color: '#93c5fd' }}>Layout:</span> {designRecipe.layout?.join(' → ')}</div>
+                <div><span style={{ color: '#93c5fd' }}>Colors:</span> {designRecipe.palette?.primary}</div>
               </div>
             </div>
           )}
-        </div>
+        </>
       )}
     </div>
   );

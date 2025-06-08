@@ -49,6 +49,8 @@ export default function SetupPasswordPage() {
     try {
       const supabase = getSupabaseClient();
       
+      console.log('Attempting to sign up user:', email);
+      
       // Sign up the user
       const { data, error: signUpError } = await supabase.auth.signUp({
         email,
@@ -62,52 +64,81 @@ export default function SetupPasswordPage() {
         }
       });
 
+      console.log('Signup response:', { data, error: signUpError });
+
       if (signUpError) {
         throw signUpError;
       }
 
       if (data.user) {
-        // Check if user needs email confirmation
-        if (data.user.email_confirmed_at || data.session) {
-          // User is ready to proceed
-          console.log('User account created and ready:', data.user.email);
-        } else {
-          // User needs to confirm email
-          setError('Please check your email and click the confirmation link, then try logging in.');
-          return;
-        }
+        console.log('User created:', {
+          id: data.user.id,
+          email: data.user.email,
+          emailConfirmed: data.user.email_confirmed_at,
+          sessionExists: !!data.session
+        });
 
-        // Link the wedding details to this user account
-        try {
-          const supabaseAdmin = getSupabaseClient(true);
-          const { error: updateError } = await supabaseAdmin
-            .from('weddings')
-            .update({ user_id: data.user.id })
-            .eq('contactemail', email)
-            .is('user_id', null)
-            .order('created_at', { ascending: false })
-            .limit(1);
+        // Always try to link the wedding record, regardless of email confirmation
+        if (weddingDetails?.id) {
+          try {
+            console.log('Linking wedding record:', weddingDetails.id, 'to user:', data.user.id);
+            
+            const { error: updateError } = await supabase
+              .from('weddings')
+              .update({ 
+                user_id: data.user.id,
+                contactemail: email 
+              })
+              .eq('id', weddingDetails.id);
 
-          if (updateError) {
-            console.error('Failed to link wedding details to user:', updateError);
-            // Continue anyway - user can still access the app
+            if (updateError) {
+              console.error('Failed to link wedding details to user:', updateError);
+            } else {
+              console.log('Successfully linked wedding record to user');
+            }
+          } catch (linkError) {
+            console.error('Error linking wedding details:', linkError);
           }
-        } catch (linkError) {
-          console.error('Error linking wedding details:', linkError);
-          // Continue anyway - user can still access the app
         }
 
-        // Clear stored wedding details
+        // Clear stored wedding details regardless of session state
         localStorage.removeItem('weddingDetails');
-        
-        // If we have a session, redirect to tasks, otherwise to login
+
+        // Check if we have a session (user is immediately logged in)
         if (data.session) {
-          router.push('/tasks');
+          console.log('User has immediate session, redirecting to tasks');
+          
+          // Set the session in the client
+          await supabase.auth.setSession(data.session);
+          
+          // Force a page refresh to ensure the session is properly set in cookies
+          window.location.href = '/tasks';
+          return;
         } else {
-          router.push('/login?message=Account created! Please sign in.');
+          // No immediate session - check if email confirmation is required
+          console.log('No immediate session - may need email confirmation');
+          
+          // Try to sign in immediately (in case email confirmation is disabled)
+          const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+          });
+
+          console.log('Immediate sign-in attempt:', { signInData, signInError });
+
+          if (signInData.session) {
+            console.log('Immediate sign-in successful, redirecting to tasks');
+            window.location.href = '/tasks';
+            return;
+          } else {
+            // Sign-in failed, likely need email confirmation
+            setError('Account created! Please check your email and click the confirmation link to complete your account setup.');
+            return;
+          }
         }
       }
     } catch (err: any) {
+      console.error('Setup password error:', err);
       setError(err.message || 'Failed to create account. Please try again.');
     } finally {
       setIsLoading(false);

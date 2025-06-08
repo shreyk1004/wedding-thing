@@ -97,7 +97,12 @@ export function WeddingChat() {
             if (saveRes.ok) {
               setSaveSuccess(true);
               setHasSaved(true);
-              localStorage.setItem('weddingDetails', JSON.stringify(data.details));
+              const responseData = await saveRes.json();
+              // Store both wedding details and the ID for later linking
+              localStorage.setItem('weddingDetails', JSON.stringify({
+                ...data.details,
+                id: responseData.data.id
+              }));
             } else {
               const err = await saveRes.text();
               setSaveError(err || 'Failed to save details.');
@@ -132,6 +137,12 @@ export function WeddingChat() {
           if (saveRes.ok) {
             setSaveSuccess(true);
             setHasSaved(true);
+            const responseData = await saveRes.json();
+            // Store both wedding details and the ID for later linking
+            localStorage.setItem('weddingDetails', JSON.stringify({
+              ...details,
+              id: responseData.data.id
+            }));
           } else {
             const err = await saveRes.text();
             setSaveError(err || 'Failed to save details.');
