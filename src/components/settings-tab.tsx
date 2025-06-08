@@ -1,8 +1,77 @@
 import { Heart, Calendar, MapPin, User } from "lucide-react";
+import { useState, useRef } from "react";
 
-export function SettingsTab() {
+interface SettingsTabProps {
+  weddingDetails?: any;
+}
+
+export function SettingsTab({ weddingDetails }: SettingsTabProps) {
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setMessage(null);
+
+    const formData = new FormData(e.target as HTMLFormElement);
+    const data = {
+      partner1name: formData.get('partner1name') as string,
+      partner2name: formData.get('partner2name') as string,
+      weddingdate: formData.get('weddingdate') as string,
+      city: formData.get('city') as string,
+      theme: formData.get('theme') as string,
+      estimatedguestcount: formData.get('estimatedguestcount') ? parseInt(formData.get('estimatedguestcount') as string) : undefined,
+      budget: formData.get('budget') ? parseFloat(formData.get('budget') as string) : undefined,
+      phone: formData.get('phone') as string,
+      contactemail: formData.get('contactemail') as string,
+    };
+
+    try {
+      const response = await fetch('/api/wedding', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to update wedding details');
+      }
+
+      setMessage({ type: 'success', text: 'Wedding details updated successfully!' });
+      
+      // Optionally refresh the page after a delay to show updated data
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+    } catch (error) {
+      console.error('Error updating wedding details:', error);
+      setMessage({ 
+        type: 'error', 
+        text: error instanceof Error ? error.message : 'Failed to update wedding details. Please try again.' 
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <div className="p-6 space-y-6">
+    <form ref={formRef} onSubmit={handleSubmit} className="p-6 space-y-6">
+      {message && (
+        <div className={`p-4 rounded-lg border ${
+          message.type === 'success' 
+            ? 'bg-green-50 border-green-200 text-green-800' 
+            : 'bg-red-50 border-red-200 text-red-800'
+        }`}>
+          {message.text}
+        </div>
+      )}
+
       <div className="bg-gradient-to-r from-[#fef9f3] to-[#fdf8f0] rounded-2xl p-6 border border-[#f0ebe4]">
         <h2 className="text-[#181511] text-xl font-bold mb-4 flex items-center gap-2">
           <Heart className="w-5 h-5" />
@@ -11,21 +80,25 @@ export function SettingsTab() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <label className="block text-sm font-medium text-[#181511] mb-2">
-              Bride's Name
+              Partner 1 Name
             </label>
             <input
               type="text"
-              defaultValue="Sarah"
+              name="partner1name"
+              defaultValue={weddingDetails?.partner1name || ""}
+              placeholder="Enter partner 1 name"
               className="w-full px-3 py-2 border border-[#e5e1dc] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e89830] focus:border-transparent"
             />
           </div>
           <div>
             <label className="block text-sm font-medium text-[#181511] mb-2">
-              Groom's Name
+              Partner 2 Name
             </label>
             <input
               type="text"
-              defaultValue="Alex"
+              name="partner2name"
+              defaultValue={weddingDetails?.partner2name || ""}
+              placeholder="Enter partner 2 name"
               className="w-full px-3 py-2 border border-[#e5e1dc] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e89830] focus:border-transparent"
             />
           </div>
@@ -36,18 +109,69 @@ export function SettingsTab() {
             </label>
             <input
               type="date"
-              defaultValue="2024-10-12"
+              name="weddingdate"
+              defaultValue={weddingDetails?.weddingdate || ""}
               className="w-full px-3 py-2 border border-[#e5e1dc] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e89830] focus:border-transparent"
             />
           </div>
           <div>
             <label className="block text-sm font-medium text-[#181511] mb-2 flex items-center gap-2">
               <MapPin className="w-4 h-4" />
-              Venue
+              Venue/City
             </label>
             <input
               type="text"
-              placeholder="Enter venue name"
+              name="city"
+              defaultValue={weddingDetails?.city || ""}
+              placeholder="Enter venue or city name"
+              className="w-full px-3 py-2 border border-[#e5e1dc] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e89830] focus:border-transparent"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-[#181511] mb-2">
+              Theme
+            </label>
+            <input
+              type="text"
+              name="theme"
+              defaultValue={weddingDetails?.theme || ""}
+              placeholder="Enter wedding theme"
+              className="w-full px-3 py-2 border border-[#e5e1dc] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e89830] focus:border-transparent"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-[#181511] mb-2">
+              Estimated Guest Count
+            </label>
+            <input
+              type="number"
+              name="estimatedguestcount"
+              defaultValue={weddingDetails?.estimatedguestcount || ""}
+              placeholder="Enter estimated guest count"
+              className="w-full px-3 py-2 border border-[#e5e1dc] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e89830] focus:border-transparent"
+            />
+          </div>
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-[#181511] mb-2">
+              Budget
+            </label>
+            <input
+              type="number"
+              name="budget"
+              defaultValue={weddingDetails?.budget || ""}
+              placeholder="Enter wedding budget"
+              className="w-full px-3 py-2 border border-[#e5e1dc] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e89830] focus:border-transparent"
+            />
+          </div>
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-[#181511] mb-2">
+              Phone
+            </label>
+            <input
+              type="tel"
+              name="phone"
+              defaultValue={weddingDetails?.phone || ""}
+              placeholder="Enter phone number"
               className="w-full px-3 py-2 border border-[#e5e1dc] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e89830] focus:border-transparent"
             />
           </div>
@@ -66,7 +190,9 @@ export function SettingsTab() {
             </label>
             <input
               type="email"
-              defaultValue="sarah@example.com"
+              name="contactemail"
+              defaultValue={weddingDetails?.contactemail || ""}
+              placeholder="Enter email address"
               className="w-full px-3 py-2 border border-[#e5e1dc] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e89830] focus:border-transparent"
             />
           </div>
@@ -84,10 +210,18 @@ export function SettingsTab() {
       </div>
 
       <div className="flex justify-end">
-        <button className="px-6 py-2 bg-[#e89830] text-[#181511] rounded-lg font-medium hover:bg-[#d88a29] transition-colors">
-          Save Changes
+        <button 
+          type="submit"
+          disabled={loading}
+          className={`px-6 py-2 rounded-lg font-medium transition-colors ${
+            loading 
+              ? 'bg-gray-400 text-gray-700 cursor-not-allowed' 
+              : 'bg-[#e89830] text-[#181511] hover:bg-[#d88a29]'
+          }`}
+        >
+          {loading ? 'Saving...' : 'Save Changes'}
         </button>
       </div>
-    </div>
+    </form>
   );
 } 

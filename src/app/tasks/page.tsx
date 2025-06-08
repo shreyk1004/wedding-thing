@@ -6,7 +6,7 @@ import { TaskList } from '@/components/task-list';
 import { supabase, handleSupabaseQuery } from '@/lib/supabase';
 import { useChatContext } from '@/components/chat-provider';
 import { TaskAIHelpModal } from '@/components/task-ai-help-modal';
-import { Task, WeddingInfo } from '@/types';
+import { Task } from '@/types';
 
 const initialTasks: Task[] = [
   { id: '1', title: 'Book venue', status: 'todo', description: 'Find and reserve the perfect venue' },
@@ -20,12 +20,6 @@ const initialTasks: Task[] = [
 ];
 
 
-const weddingInfo: WeddingInfo = {
-  bride: 'Sarah',
-  groom: 'Alex',
-  date: '2024-10-12',
-  venue: 'Garden Rose Manor',
-};
 export default function TasksPage() {
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
   const [weddingDetails, setWeddingDetails] = useState<any>(null);
