@@ -1,6 +1,6 @@
 import OpenAI from 'openai';
 import { getSupabaseClient } from '@/lib/supabase';
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
@@ -9,10 +9,10 @@ export async function POST(req: Request) {
   const { task, extraInfo, messages } = await req.json();
 
   // Get the authenticated user
-  const supabase = createServerComponentClient({ cookies });
-  const { data: { user } } = await supabase.auth.getUser();
+  const supabase = createRouteHandlerClient({ cookies });
+  const { data: { session } } = await supabase.auth.getSession();
 
-  if (!user) {
+  if (!session) {
     return new Response(
       JSON.stringify({ reply: 'Please log in to access AI assistance.' }),
       { status: 401, headers: { 'Content-Type': 'application/json' } }
@@ -28,7 +28,7 @@ export async function POST(req: Request) {
   const { data: weddingRows, error: weddingError } = await supabaseAdmin
     .from('weddings')
     .select('*')
-    .eq('user_id', user.id)
+    .eq('user_id', session.user.id)
     .order('created_at', { ascending: false })
     .limit(1);
   

@@ -1,11 +1,12 @@
-import { createClient } from '@supabase/supabase-js';
-// import { createBrowserClient } from '@supabase/auth-helpers-nextjs';
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 
+// Environment variables
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-// Client-side Supabase client configured for proper session handling
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+// Legacy client for backward compatibility - client-side only
+export const supabase = createSupabaseClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
@@ -14,11 +15,9 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   }
 });
 
-// Server-side Supabase client with service role key for API routes
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
+// Admin client for server-side operations
 export const supabaseAdmin = supabaseServiceKey 
-  ? createClient(supabaseUrl, supabaseServiceKey, {
+  ? createSupabaseClient(supabaseUrl, supabaseServiceKey, {
       auth: {
         autoRefreshToken: false,
         persistSession: false
@@ -26,12 +25,24 @@ export const supabaseAdmin = supabaseServiceKey
     })
   : null;
 
-// Helper function to get the appropriate client
+// Helper function to get the appropriate client (for backward compatibility)
 export function getSupabaseClient(useAdmin = false) {
   if (useAdmin && supabaseAdmin) {
     return supabaseAdmin;
   }
   return supabase;
+}
+
+// For client components
+export function createClient() {
+  return createSupabaseClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: true,
+      flowType: 'pkce'
+    }
+  });
 }
 
 // Helper function to handle RLS errors gracefully

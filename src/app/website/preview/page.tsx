@@ -1,8 +1,6 @@
 "use client";
 
 import { useEffect, useState, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { supabase } from '@/lib/supabaseClient';
 import { WebsiteBuilder } from '@/components/WebsiteBuilder';
 
 interface WeddingData {
@@ -17,36 +15,43 @@ interface WeddingData {
 }
 
 function WebsitePreviewContent() {
-  const searchParams = useSearchParams();
   const [weddingData, setWeddingData] = useState<WeddingData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isRegenerating, setIsRegenerating] = useState(false);
 
   useEffect(() => {
-    const weddingId = searchParams.get('id');
-    if (!weddingId) {
-      setError('No wedding ID provided');
-      return;
-    }
+    fetchUserWeddingData();
+  }, []);
 
-    fetchWeddingData(weddingId);
-  }, [searchParams]);
-
-  const fetchWeddingData = async (weddingId: string) => {
+  const fetchUserWeddingData = async () => {
     try {
-      const { data, error } = await supabase
-        .from('weddings')
-        .select('*')
-        .eq('id', weddingId)
-        .single();
+      console.log('Fetching authenticated user wedding data for preview...');
+      
+      // Use the secure API endpoint that gets the user's wedding data
+      const response = await fetch('/api/wedding', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
 
-      if (error) {
-        setError('Failed to fetch wedding data');
-        console.error('Error:', error);
+      if (!response.ok) {
+        if (response.status === 401) {
+          setError('Please log in to view your wedding website');
+          return;
+        }
+        throw new Error('Failed to fetch wedding data');
+      }
+
+      const result = await response.json();
+      console.log('Fetched user wedding data for preview:', result);
+
+      if (!result.data) {
+        setError('No wedding data found. Please create your wedding website first.');
         return;
       }
 
-      setWeddingData(data);
+      setWeddingData(result.data);
     } catch (err) {
       setError('Failed to fetch wedding data');
       console.error('Error:', err);
@@ -59,17 +64,7 @@ function WebsitePreviewContent() {
     setIsRegenerating(true);
     
     try {
-      // First, clear the existing design from the database to force regeneration
-      const { error: clearError } = await supabase
-        .from('weddings')
-        .update({ design: null })
-        .eq('id', weddingData.id);
-
-      if (clearError) {
-        console.error('Error clearing design:', clearError);
-      }
-
-      // Now generate a new design
+      // Generate a new design using the wedding ID
       const response = await fetch('/api/design-recipe', {
         method: 'POST',
         headers: {
@@ -82,7 +77,7 @@ function WebsitePreviewContent() {
 
       if (response.ok) {
         // Refetch wedding data to get the new design
-        await fetchWeddingData(weddingData.id);
+        await fetchUserWeddingData();
       } else {
         console.error('Failed to regenerate design:', response.statusText);
       }
@@ -97,7 +92,13 @@ function WebsitePreviewContent() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
         <div className="text-center">
-          <p className="text-red-500">{error}</p>
+          <p className="text-red-500 mb-4">{error}</p>
+          <button
+            onClick={() => window.location.href = '/website'}
+            className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+          >
+            Create Wedding Website
+          </button>
         </div>
       </div>
     );
@@ -107,7 +108,7 @@ function WebsitePreviewContent() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
         <div className="text-center">
-          <p style={{ color: 'black' }}>Loading...</p>
+          <p style={{ color: 'black' }}>Loading your wedding website...</p>
         </div>
       </div>
     );

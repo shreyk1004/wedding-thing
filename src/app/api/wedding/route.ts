@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { weddingDetailsSchema } from '@/types/wedding';
 import { getSupabaseClient } from '@/lib/supabase';
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { z } from 'zod';
 
@@ -40,11 +40,25 @@ export async function POST(request: NextRequest) {
     // Validate the input data
     const validatedData = WeddingCreateSchema.parse(body);
 
-    const supabase = getSupabaseClient(true);
+    // Get the authenticated user
+    const supabase = createRouteHandlerClient({ cookies });
+    const { data: { user } } = await supabase.auth.getUser();
 
-    const { data, error } = await supabase
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Add user_id to the wedding data
+    const weddingDataWithUser = {
+      ...validatedData,
+      user_id: user.id
+    };
+
+    const supabaseAdmin = getSupabaseClient(true);
+
+    const { data, error } = await supabaseAdmin
       .from('weddings')
-      .insert([validatedData])
+      .insert([weddingDataWithUser])
       .select()
       .single();
 
@@ -64,7 +78,7 @@ export async function POST(request: NextRequest) {
 export async function GET() {
   try {
     // Get the authenticated user
-    const supabase = createServerComponentClient({ cookies });
+    const supabase = createRouteHandlerClient({ cookies });
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
@@ -100,7 +114,7 @@ export async function PUT(request: NextRequest) {
     const validatedData = WeddingUpdateSchema.parse(body);
 
     // Get the authenticated user
-    const supabase = createServerComponentClient({ cookies });
+    const supabase = createRouteHandlerClient({ cookies });
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {

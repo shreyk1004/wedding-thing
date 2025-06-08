@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import Image from 'next/image';
-import { useSearchParams } from 'next/navigation';
 
 interface WeddingFormData {
   bride: string;
@@ -16,8 +15,6 @@ interface WeddingFormData {
 }
 
 export function WebsiteTab() {
-  const searchParams = useSearchParams();
-  const weddingId = searchParams.get('id');
   const supabase = createClientComponentClient();
 
   const [formData, setFormData] = useState<WeddingFormData>({
@@ -34,27 +31,32 @@ export function WebsiteTab() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    async function fetchWeddingData() {
-      if (!weddingId) {
-        setIsLoading(false);
-        return;
-      }
-
+    async function fetchUserWeddingData() {
       try {
-        console.log('Fetching wedding data for ID:', weddingId);
-        const { data, error } = await supabase
-          .from('weddings')
-          .select('*')
-          .eq('id', weddingId)
-          .single();
+        console.log('Fetching authenticated user wedding data...');
+        
+        // Use the secure API endpoint that gets the user's wedding data
+        const response = await fetch('/api/wedding', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
 
-        if (error) {
-          console.error('Error fetching wedding:', error);
-          return;
+        if (!response.ok) {
+          if (response.status === 401) {
+            console.log('User not authenticated');
+            setIsLoading(false);
+            return;
+          }
+          throw new Error('Failed to fetch wedding data');
         }
 
-        console.log('Fetched wedding data:', data);
-        if (data) {
+        const result = await response.json();
+        console.log('Fetched user wedding data:', result);
+
+        if (result.data) {
+          const data = result.data;
           setFormData({
             bride: data.partner1name || "",
             groom: data.partner2name || "",
@@ -66,14 +68,14 @@ export function WebsiteTab() {
           });
         }
       } catch (err) {
-        console.error('Error:', err);
+        console.error('Error fetching wedding data:', err);
       } finally {
         setIsLoading(false);
       }
     }
 
-    fetchWeddingData();
-  }, [weddingId, supabase]);
+    fetchUserWeddingData();
+  }, []);
 
   const handleInputChange = (field: keyof WeddingFormData, value: string | string[]) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -273,8 +275,8 @@ export function WebsiteTab() {
 
       const data = await response.json();
       
-      // Redirect to preview with AI generation
-      window.location.href = `/website/preview?id=${data.id}`;
+      // Redirect to secure preview page (no ID needed - uses authenticated user)
+      window.location.href = `/website/preview`;
     } catch (error) {
       console.error('Error saving wedding:', error);
       setUploadError('Failed to save wedding details. Please try again.');
