@@ -29,6 +29,7 @@ export function WebsiteTab() {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isDragging, setIsDragging] = useState(false);
 
   useEffect(() => {
     async function fetchUserWeddingData() {
@@ -81,8 +82,7 @@ export function WebsiteTab() {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
+  const handleFileUpload = async (files: File[]) => {
     if (!files || files.length === 0) return;
 
     setIsUploading(true);
@@ -120,7 +120,7 @@ export function WebsiteTab() {
       }
 
       // Upload each file
-      for (const file of Array.from(files)) {
+      for (const file of files) {
         const formData = new FormData();
         formData.append('file', file);
         formData.append('weddingId', currentWeddingId);
@@ -191,6 +191,49 @@ export function WebsiteTab() {
     } finally {
       setIsUploading(false);
     }
+  };
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    await handleFileUpload(Array.from(files));
+  };
+
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Only set dragging to false if we're leaving the drop zone itself
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+      setIsDragging(false);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const files = Array.from(e.dataTransfer.files).filter(file => 
+      file.type.startsWith('image/')
+    );
+
+    if (files.length === 0) {
+      setUploadError('Please drop only image files.');
+      return;
+    }
+
+    await handleFileUpload(files);
   };
 
   const handlePhotoDelete = async (photoUrl: string) => {
@@ -387,11 +430,35 @@ export function WebsiteTab() {
           </div>
         </div>
 
-        <div className="space-y-6 rounded-lg p-6" style={{ border: '2px dashed #d1d5db', borderRadius: '8px', paddingTop: '5px', paddingBottom: '20px', marginTop: '40px', width: '90%', marginLeft: '32px'}}>
+        <div 
+          className={`space-y-6 rounded-lg p-6 transition-all duration-300 ${isDragging ? 'border-blue-500 bg-blue-50' : 'border-gray-300'}`}
+          style={{ 
+            border: isDragging ? '2px solid #3b82f6' : '2px dashed #d1d5db', 
+            borderRadius: '8px', 
+            paddingTop: '20px', 
+            paddingBottom: '20px', 
+            marginTop: '40px', 
+            width: '90%', 
+            marginLeft: '32px'
+          }}
+          onDragEnter={handleDragEnter}
+          onDragLeave={handleDragLeave}
+          onDragOver={handleDragOver}
+          onDrop={handleDrop}
+        >
           <div className="text-center space-y-4">
             <h3 className="text-2xl font-semibold" style={{ color: 'black' }}>Upload Photos</h3>
+            <div className={`text-4xl transition-all duration-300 ${isDragging ? 'scale-110' : ''}`}>
+              {isDragging ? '📤' : '📸'}
+            </div>
             <p className="text-sm max-w-xl mx-auto" style={{ color: 'black' }}>
-              Add photos of you and your partner to personalize your website. The first photo will be used as your hero image!
+              {isDragging 
+                ? 'Drop your photos here!' 
+                : 'Add photos of you and your partner to personalize your website. The first photo will be used as your hero image!'
+              }
+            </p>
+            <p className="text-xs max-w-xl mx-auto" style={{ color: '#666' }}>
+              Drag and drop images here, or click the button below to browse
             </p>
             {uploadError && (
               <p className="text-red-500 text-sm">{uploadError}</p>
@@ -411,9 +478,9 @@ export function WebsiteTab() {
               <label
                 htmlFor="photo-upload"
                 className={`inline-block px-8 py-3 text-sm bg-gray-100 rounded-lg cursor-pointer hover:bg-gray-200 transition-colors font-medium border border-gray-300 ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                style={{ color: 'black', paddingTop: '5px', paddingBottom: '5px', paddingLeft: '5px', paddingRight: '5px', borderRadius: '8px' }}
+                style={{ color: 'black', paddingTop: '8px', paddingBottom: '8px', paddingLeft: '16px', paddingRight: '16px', borderRadius: '8px' }}
               >
-                {isUploading ? 'Uploading...' : 'Upload Photos'}
+                {isUploading ? 'Uploading...' : 'Browse Files'}
               </label>
             </div>
           </div>

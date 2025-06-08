@@ -36,7 +36,26 @@ export function GallerySection({
       // Not enough photos for a separate gallery after hero and story
       return [];
     }
-    return photos.slice(4); // Start from photo 5 onwards
+    
+    // Filter and validate URLs before returning
+    const validPhotos = photos.slice(4).filter(photo => {
+      if (!photo || typeof photo !== 'string' || photo.trim() === '') {
+        console.warn('Invalid photo URL found:', photo);
+        return false;
+      }
+      
+      // Check if it's a valid URL
+      try {
+        new URL(photo);
+        return true;
+      } catch (e) {
+        console.warn('Invalid photo URL format:', photo);
+        return false;
+      }
+    });
+    
+    console.log('Gallery photos after filtering:', validPhotos);
+    return validPhotos;
   };
 
   const galleryPhotos = getGalleryPhotos();
@@ -66,15 +85,14 @@ export function GallerySection({
           
           <div 
             className="max-w-lg mx-auto p-8 rounded-lg"
-            style={{ backgroundColor: palette.accent, opacity: 0.05 }}
+            style={{ backgroundColor: `${palette.accent}20` }}
           >
             <div className="text-6xl mb-4">📸</div>
             <p 
               className="text-lg mb-4"
               style={{ 
                 fontFamily: fonts.body,
-                color: palette.primary,
-                opacity: 0.8
+                color: '#000000'
               }}
             >
               Upload more photos to create a beautiful gallery section!
@@ -83,8 +101,7 @@ export function GallerySection({
               className="text-sm"
               style={{ 
                 fontFamily: fonts.body,
-                color: palette.primary,
-                opacity: 0.6
+                color: '#333333'
               }}
             >
               We need at least 5 photos total to show additional images in the gallery.
@@ -153,10 +170,12 @@ export function GallerySection({
             ];
             const aspectClass = aspectVariations[index % aspectVariations.length];
             
+            console.log(`Gallery photo ${index + 1}:`, photo); // Debug log
+            
             return (
               <div 
-                key={index} 
-                className={`${aspectClass} overflow-hidden rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 relative group cursor-pointer`}
+                key={`gallery-${index}-${photo}`} 
+                className={`${aspectClass} overflow-hidden rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 relative group cursor-pointer bg-gray-100`}
               >
                 <Image
                   src={photo}
@@ -164,6 +183,11 @@ export function GallerySection({
                   fill
                   className="object-cover group-hover:scale-110 transition-transform duration-500"
                   sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
+                  unoptimized={true}
+                  onLoad={() => console.log(`Gallery image ${index + 1} loaded successfully`)}
+                  onError={(e) => {
+                    console.error(`Gallery image ${index + 1} failed to load:`, photo, e);
+                  }}
                 />
                 
                 {/* Hover overlay with number */}

@@ -59,7 +59,7 @@ export function DetailsSection({
       className="py-16 md:py-24"
       style={{ backgroundColor: bgColor }}
     >
-      <div className="max-w-6xl mx-auto px-4 relative">
+      <div className="max-w-4xl mx-auto px-4 relative">
         {/* Accent Decorations */}
         {accentPreset === 'florals' && (
           <div className="absolute top-8 right-8 text-4xl opacity-8 pointer-events-none" style={{ color: palette.accent }}>
@@ -114,9 +114,9 @@ export function DetailsSection({
         </div>
 
         {/* Details Grid */}
-        <div className="grid md:grid-cols-2 gap-12 lg:gap-16">
+        <div className="grid md:grid-cols-2 gap-16">
           {/* Ceremony Details */}
-          <div className="text-center md:text-left">
+          <div className="text-center">
             <div className="mb-8">
               <h3 
                 className="text-2xl md:text-3xl font-bold mb-4"
@@ -129,7 +129,7 @@ export function DetailsSection({
               </h3>
               
               <div 
-                className="w-16 h-1 mx-auto md:mx-0 mb-6"
+                className="w-16 h-1 mx-auto mb-6"
                 style={{ backgroundColor: palette.accent }}
               />
             </div>
@@ -146,11 +146,10 @@ export function DetailsSection({
                   Date
                 </h4>
                 <p 
-                  className="text-lg"
+                  className="text-lg text-center"
                   style={{ 
                     fontFamily: fonts.body,
-                    color: palette.primary,
-                    opacity: 0.9
+                    color: '#2d3748'
                   }}
                 >
                   {formatDate(weddingdate)}
@@ -168,11 +167,10 @@ export function DetailsSection({
                   Time
                 </h4>
                 <p 
-                  className="text-lg"
+                  className="text-lg text-center"
                   style={{ 
                     fontFamily: fonts.body,
-                    color: palette.primary,
-                    opacity: 0.9
+                    color: '#2d3748'
                   }}
                 >
                   {formatTime(weddingdate)}
@@ -190,11 +188,10 @@ export function DetailsSection({
                   Location
                 </h4>
                 <p 
-                  className="text-lg"
+                  className="text-lg text-center"
                   style={{ 
                     fontFamily: fonts.body,
-                    color: palette.primary,
-                    opacity: 0.9
+                    color: '#2d3748'
                   }}
                 >
                   {city}
@@ -204,7 +201,7 @@ export function DetailsSection({
           </div>
 
           {/* Reception Details */}
-          <div className="text-center md:text-left">
+          <div className="text-center">
             <div className="mb-8">
               <h3 
                 className="text-2xl md:text-3xl font-bold mb-4"
@@ -217,7 +214,7 @@ export function DetailsSection({
               </h3>
               
               <div 
-                className="w-16 h-1 mx-auto md:mx-0 mb-6"
+                className="w-16 h-1 mx-auto mb-6"
                 style={{ backgroundColor: palette.accent }}
               />
             </div>
@@ -234,11 +231,10 @@ export function DetailsSection({
                   Time
                 </h4>
                 <p 
-                  className="text-lg"
+                  className="text-lg text-center"
                   style={{ 
                     fontFamily: fonts.body,
-                    color: palette.primary,
-                    opacity: 0.9
+                    color: '#2d3748'
                   }}
                 >
                   Following the ceremony
@@ -256,11 +252,10 @@ export function DetailsSection({
                   Location
                 </h4>
                 <p 
-                  className="text-lg"
+                  className="text-lg text-center"
                   style={{ 
                     fontFamily: fonts.body,
-                    color: palette.primary,
-                    opacity: 0.9
+                    color: '#2d3748'
                   }}
                 >
                   {city}
@@ -278,11 +273,10 @@ export function DetailsSection({
                   Celebration
                 </h4>
                 <p 
-                  className="text-lg"
+                  className="text-lg text-center"
                   style={{ 
                     fontFamily: fonts.body,
-                    color: palette.primary,
-                    opacity: 0.9
+                    color: '#2d3748'
                   }}
                 >
                   Dinner, dancing, and joy
@@ -296,12 +290,12 @@ export function DetailsSection({
         <div className="mt-16 text-center">
           <div 
             className="max-w-3xl mx-auto p-8 rounded-lg"
-            style={{ backgroundColor: palette.accent, opacity: 0.05 }}
+            style={{ backgroundColor: `${palette.accent}20` }}
           >
             <h4 
               className="text-xl font-semibold mb-4"
               style={{ 
-                fontFamily: fonts.heading,
+                fontFamily: fonts.body,
                 color: palette.primary
               }}
             >
@@ -312,8 +306,7 @@ export function DetailsSection({
               className="text-lg leading-relaxed"
               style={{ 
                 fontFamily: fonts.body,
-                color: palette.primary,
-                opacity: 0.8
+                color: '#2d3748'
               }}
             >
               We request that our wedding be an unplugged ceremony. Please keep phones and cameras 

@@ -90,20 +90,9 @@ export function RSVPSection({
         <div 
           className="max-w-2xl mx-auto p-8 md:p-12 rounded-lg shadow-lg"
           style={{ 
-            backgroundColor: palette.accent,
-            opacity: 0.05
+            backgroundColor: `${palette.accent}20`,
           }}
         >
-          <h3 
-            className="text-2xl md:text-3xl font-bold mb-8"
-            style={{ 
-              fontFamily: fonts.heading,
-              color: palette.primary
-            }}
-          >
-            Répondez S'il Vous Plaît
-          </h3>
-
           {/* RSVP Details */}
           <div className="space-y-6 mb-8">
             <div>
@@ -111,21 +100,12 @@ export function RSVPSection({
                 className="text-lg font-semibold mb-2"
                 style={{ 
                   fontFamily: fonts.body,
-                  color: palette.primary
+                  color: palette.primary,
+                  opacity: 0.9
                 }}
               >
                 Wedding of {partner1name} & {partner2name}
               </h4>
-              <p 
-                className="text-base"
-                style={{ 
-                  fontFamily: fonts.body,
-                  color: palette.primary,
-                  opacity: 0.8
-                }}
-              >
-                Please respond by two weeks before the wedding date
-              </p>
             </div>
 
             <div>
@@ -134,7 +114,7 @@ export function RSVPSection({
                 style={{ 
                   fontFamily: fonts.body,
                   color: palette.primary,
-                  opacity: 0.9
+                  opacity: 0.75
                 }}
               >
                 Kindly RSVP by clicking the button below or contacting us directly.
@@ -170,7 +150,7 @@ export function RSVPSection({
               style={{ 
                 fontFamily: fonts.body,
                 color: palette.primary,
-                opacity: 0.7
+                opacity: 0.75
               }}
             >
               Questions? Feel free to reach out to us directly.
