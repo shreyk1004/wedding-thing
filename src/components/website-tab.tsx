@@ -294,7 +294,7 @@ export function WebsiteTab() {
     setUploadError(null);
 
     try {
-      const endpoint = formData.weddingId ? `/api/wedding/${formData.weddingId}` : '/api/wedding';
+      const endpoint = '/api/wedding'; // Always use the same endpoint - method determines behavior
       const method = formData.weddingId ? 'PUT' : 'POST';
 
       const response = await fetch(endpoint, {
@@ -317,6 +317,35 @@ export function WebsiteTab() {
       }
 
       const data = await response.json();
+      console.log('Wedding API response:', data); // Debug log
+      
+      // Get the wedding ID from the response
+      const weddingId = data.data?.id;
+      if (!weddingId) {
+        console.error('No wedding ID in response:', data);
+        throw new Error('No wedding ID returned from API');
+      }
+      
+      // Generate a new design based on the updated wedding data
+      console.log('🎨 Generating new design after saving wedding details...');
+      const designResponse = await fetch('/api/design-recipe', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          weddingId: weddingId
+        }),
+      });
+
+      if (designResponse.ok) {
+        console.log('✅ New design generated successfully');
+      } else {
+        console.warn('⚠️ Design generation failed, but wedding was saved');
+      }
+      
+      // Small delay to ensure design generation completes
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       // Redirect to secure preview page (no ID needed - uses authenticated user)
       window.location.href = `/website/preview`;
