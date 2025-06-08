@@ -5,7 +5,6 @@ import { WeddingHeader } from '@/components/wedding-header';
 import { TaskList } from '@/components/task-list';
 import { supabase, handleSupabaseQuery } from '@/lib/supabase';
 import { useChatContext } from '@/components/chat-provider';
-import { TaskAIHelpModal } from '@/components/task-ai-help-modal';
 import { Task } from '@/types';
 
 const initialTasks: Task[] = [
