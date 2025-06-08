@@ -176,27 +176,32 @@ const taskTools = [
 
 export async function POST(request: NextRequest) {
   try {
-    const { task, message, chatHistory } = await request.json();
+    const { task, message, chatHistory, weddingDetails } = await request.json();
 
     if (!task) {
       return NextResponse.json({ error: 'Task is required' }, { status: 400 });
     }
 
-    // Retrieve the most recent wedding data from Supabase using admin client
-    console.log('Fetching wedding data from Supabase...');
-    const supabase = getSupabaseClient(true);
-    const { data: weddingData, error: supabaseError } = await supabase
-      .from('weddings')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(1);
+    // Use wedding details from frontend if available, otherwise fetch from Supabase as fallback
+    let wedding = weddingDetails;
+    
+    if (!wedding) {
+      console.log('No wedding details provided from frontend, fetching from Supabase as fallback...');
+      const supabase = getSupabaseClient(true);
+      const { data: weddingData, error: supabaseError } = await supabase
+        .from('weddings')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(1);
 
-    if (supabaseError) {
-      console.error('Supabase error:', supabaseError);
+      if (supabaseError) {
+        console.error('Supabase error:', supabaseError);
+      }
+
+      wedding = weddingData && weddingData.length > 0 ? weddingData[0] : null;
     }
 
-    const wedding = weddingData && weddingData.length > 0 ? weddingData[0] : null;
-    console.log('Retrieved wedding data:', wedding);
+    console.log('Using wedding data:', wedding);
 
     // Create context with wedding details
     const weddingContext = wedding ? `
@@ -223,16 +228,22 @@ ${weddingContext}
 Current Task: "${task.title}"
 Task Description: "${task.description || 'No description provided'}"
 
-TASK TYPE & AVAILABLE TOOLS:
-- VENUE tasks → generate_venue_cards + budget_breakdown
-- PHOTOGRAPHER tasks → generate_vendor_cards (taskType: "photographer") + budget_breakdown  
-- DJ/MUSIC tasks → generate_vendor_cards (taskType: "DJ") + budget_breakdown
-- FLORIST/FLOWER tasks → generate_vendor_cards (taskType: "florist") + budget_breakdown
-- CATERING/MENU tasks → generate_menu_cards + budget_breakdown
-- INVITATION tasks → generate_invitation_designs + budget_breakdown
-- HOTEL/ACCOMMODATION tasks → generate_accommodation_guide + budget_breakdown
+IMPORTANT: When calling tools, you MUST use the wedding details from the context above:
+- city: "${wedding?.city || 'Not specified'}"
+- guestCount: ${wedding?.estimatedguestcount || 100}
+- budget: ${wedding?.budget || 10000}
+- theme: "${wedding?.theme || 'Classic'}"
 
-Use tools when providing recommendations, but also engage in helpful conversation. Be friendly and conversational while being informative.`
+TASK TYPE & AVAILABLE TOOLS:
+- VENUE tasks → generate_venue_cards (use city, guestCount, budget, theme from wedding details) + budget_breakdown
+- PHOTOGRAPHER tasks → generate_vendor_cards (taskType: "photographer", use city, budget from wedding details) + budget_breakdown  
+- DJ/MUSIC tasks → generate_vendor_cards (taskType: "DJ", use city, budget from wedding details) + budget_breakdown
+- FLORIST/FLOWER tasks → generate_vendor_cards (taskType: "florist", use city, budget from wedding details) + budget_breakdown
+- CATERING/MENU tasks → generate_menu_cards (use guestCount, budget, city from wedding details) + budget_breakdown
+- INVITATION tasks → generate_invitation_designs (use theme from wedding details) + budget_breakdown
+- HOTEL/ACCOMMODATION tasks → generate_accommodation_guide (use city, guestCount from wedding details) + budget_breakdown
+
+ALWAYS use the wedding details context when calling tools. Do not use generic or example data. Use tools when providing recommendations, but also engage in helpful conversation. Be friendly and conversational while being informative.`
       }
     ];
 
@@ -396,101 +407,109 @@ function generateVenueCards(args: any): string {
   return `
 <div class="venue-cards">
 
-## 🏛️ Top 5 Venues in ${city}
+## 🏛️ Top Venue Types to Consider in ${city}
 
-### 🌟 **The Ritz-Carlton Naples**
+### 🌟 **Luxury Hotel/Resort**
 <div class="venue-card">
-<img src="https://images.unsplash.com/photo-1519167758481-83f29d8ace68?w=400&h=250&fit=crop" alt="Luxury beachfront resort" style="width: 100%; height: 200px; object-fit: cover; border-radius: 8px; margin: 10px 0;">
+<img src="https://images.unsplash.com/photo-1519167758481-83f29d8ace68?w=400&h=250&fit=crop" alt="Luxury hotel resort" style="width: 100%; height: 200px; object-fit: cover; border-radius: 8px; margin: 10px 0;">
 
-**💰 $4,000-8,000** | **👥 Up to 200 guests** | **🏖️ Beachfront**
+**💰 $4,000-8,000** | **👥 Up to 200 guests** | **🏨 Full Service**
 
 ✅ Perfect for your ${guestCount} guests  
 ✅ ${theme} wedding friendly  
 ✅ Multiple ceremony locations  
+✅ Professional wedding coordinators
 
-**📞 (239) 598-3300**  
-**🌐 [ritzcarlton.com/naples](https://www.ritzcarlton.com/naples)**  
-**📍 280 Vanderbilt Beach Rd**
+**🔍 Search:** "luxury wedding venues ${city}"  
+**💡 Tip:** Book 12-18 months in advance  
 </div>
 
 ---
 
-### 🌸 **Naples Botanical Garden**
+### 🌸 **Garden/Botanical Venue**
 <div class="venue-card">
 <img src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=250&fit=crop" alt="Beautiful garden venue" style="width: 100%; height: 200px; object-fit: cover; border-radius: 8px; margin: 10px 0;">
 
-**💰 $2,500-4,000** | **👥 Up to 150 guests** | **🌿 Garden**
+**💰 $2,500-4,000** | **👥 Up to 150 guests** | **🌿 Natural Setting**
 
 ✅ Stunning natural backdrop  
-✅ Asian garden elements  
+✅ Beautiful photo opportunities  
 ✅ Indoor/outdoor options  
+✅ Seasonal flower displays
 
-**📞 (239) 643-7275**  
-**🌐 [naplesgarden.org](https://www.naplesgarden.org/events)**  
-**📍 4820 Bayshore Dr**
+**🔍 Search:** "botanical garden weddings ${city}"  
+**💡 Tip:** Consider seasonal bloom schedules  
 </div>
 
 ---
 
-### 🏖️ **LaPlaya Beach Resort**
+### 🏖️ **Waterfront/Beach Venue**
 <div class="venue-card">
-<img src="https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=400&h=250&fit=crop" alt="Beach resort wedding" style="width: 100%; height: 200px; object-fit: cover; border-radius: 8px; margin: 10px 0;">
+<img src="https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=400&h=250&fit=crop" alt="Beach wedding venue" style="width: 100%; height: 200px; object-fit: cover; border-radius: 8px; margin: 10px 0;">
 
-**💰 $3,000-5,500** | **👥 Up to 120 guests** | **🌅 Sunset Views**
+**💰 $3,000-5,500** | **👥 Up to 120 guests** | **🌅 Scenic Views**
 
-✅ Intimate beachfront setting  
-✅ Asian-inspired decor options  
-✅ Full-service venue  
+✅ Intimate waterfront setting  
+✅ Natural romantic ambiance  
+✅ Sunset ceremony potential  
+✅ Unique photo opportunities
 
-**📞 (239) 597-3123**  
-**🌐 [laplayaresort.com](https://www.laplayaresort.com)**  
-**📍 9891 Gulf Shore Dr**
+**🔍 Search:** "waterfront wedding venues ${city}"  
+**💡 Tip:** Check wind and weather backup plans  
 </div>
 
 ---
 
-### 🎨 **Artis-Naples**
+### 🎨 **Historic/Cultural Venue**
 <div class="venue-card">
-<img src="https://images.unsplash.com/photo-1464207687429-0a1dd7228f2d?w=400&h=250&fit=crop" alt="Elegant arts venue" style="width: 100%; height: 200px; object-fit: cover; border-radius: 8px; margin: 10px 0;">
+<img src="https://images.unsplash.com/photo-1464207687429-0a1dd7228f2d?w=400&h=250&fit=crop" alt="Historic elegant venue" style="width: 100%; height: 200px; object-fit: cover; border-radius: 8px; margin: 10px 0;">
 
-**💰 $2,800-4,500** | **👥 Up to 100 guests** | **🎭 Cultural**
+**💰 $2,800-4,500** | **👥 Up to 100 guests** | **🏛️ Character**
 
 ✅ Sophisticated ambiance  
-✅ Professional lighting  
-✅ Artistic backdrop  
+✅ Unique architectural features  
+✅ Built-in elegant decor  
+✅ Historic charm and character
 
-**📞 (239) 597-1900**  
-**🌐 [artisnaples.org](https://www.artisnaples.org/events)**  
-**📍 5833 Pelican Bay Blvd**
+**🔍 Search:** "historic wedding venues ${city}"  
+**💡 Tip:** Ask about restoration restrictions  
 </div>
 
 ---
 
-### 🏖️ **Barefoot Beach Club**
+### 🏡 **Private Estate/Mansion**
 <div class="venue-card">
-<img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=250&fit=crop" alt="Exclusive beach club" style="width: 100%; height: 200px; object-fit: cover; border-radius: 8px; margin: 10px 0;">
+<img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=250&fit=crop" alt="Private estate venue" style="width: 100%; height: 200px; object-fit: cover; border-radius: 8px; margin: 10px 0;">
 
-**💰 $3,500-6,000** | **👥 Up to 130 guests** | **🌊 Private Beach**
+**💰 $3,500-6,000** | **👥 Up to 130 guests** | **🏰 Exclusive**
 
-✅ Exclusive waterfront location  
-✅ Sunset ceremony options  
-✅ Private beach access  
+✅ Private and intimate setting  
+✅ Customizable to your vision  
+✅ Beautiful grounds and gardens  
+✅ Exclusive use of property
 
-**📞 (239) 353-2111**  
-**🌐 [barefootbeach.com](https://www.barefootbeach.com)**  
-**📍 6900 Barefoot Beach Blvd**
+**🔍 Search:** "private estate weddings ${city}"  
+**💡 Tip:** Verify catering and vendor policies  
 </div>
 
 </div>
 
 ## 🎯 Next Steps
-1. **📱 Call top 3 choices** - Check your wedding date availability
-2. **🌐 Visit websites** - View photo galleries
+1. **📱 Research venues** - Use suggested search terms above
+2. **🌐 Visit websites** - View photo galleries and pricing
 3. **📅 Schedule tours** - See venues in person
-4. **💌 Request quotes** - Get detailed pricing
+4. **💌 Request quotes** - Get detailed pricing for your date
+5. **📝 Check availability** - Confirm your wedding date is open
 
 ## 📸 Photo Inspiration
-Search Instagram: **#napleswedding #${theme.toLowerCase()}wedding**
+Search Instagram: **#${city.toLowerCase()}wedding #${theme.toLowerCase()}wedding**
+
+## 💡 Questions to Ask Venues
+- What's included in the base rental fee?
+- Are there preferred vendor lists or restrictions?
+- What's the backup plan for bad weather?
+- How many hours are included in the rental?
+- What are the payment terms and cancellation policy?
   `;
 }
 
@@ -501,27 +520,27 @@ function generateVendorCards(args: any): string {
     photographer: {
       emoji: '📸',
       vendors: [
-        { name: 'Sarah Chen Photography', price: '$2,500-4,000', specialty: 'Asian weddings', phone: '(239) 555-0123' },
-        { name: 'Naples Wedding Studio', price: '$1,800-3,200', specialty: 'Destination weddings', phone: '(239) 555-0124' },
-        { name: 'Coastal Captures', price: '$2,000-3,500', specialty: 'Beach ceremonies', phone: '(239) 555-0125' }
+        { name: 'Premier Wedding Photography', price: '$2,500-4,000', specialty: 'Artistic wedding photography', tip: 'View portfolio online' },
+        { name: 'Classic Captures Studio', price: '$1,800-3,200', specialty: 'Traditional & candid shots', tip: 'Ask about engagement sessions' },
+        { name: 'Modern Lens Photography', price: '$2,000-3,500', specialty: 'Contemporary wedding style', tip: 'Check social media reviews' }
       ],
       image: 'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=400&h=250&fit=crop'
     },
     DJ: {
       emoji: '🎵',
       vendors: [
-        { name: 'Elite Events DJ', price: '$800-1,500', specialty: 'Multi-cultural music', phone: '(239) 555-0126' },
-        { name: 'Naples Sound Co', price: '$600-1,200', specialty: 'Wedding receptions', phone: '(239) 555-0127' },
-        { name: 'Sunset Beats', price: '$750-1,300', specialty: 'Beach weddings', phone: '(239) 555-0128' }
+        { name: 'Elite Wedding Entertainment', price: '$800-1,500', specialty: 'Multi-cultural music', tip: 'Request music style samples' },
+        { name: 'Sound & Celebration DJs', price: '$600-1,200', specialty: 'Reception entertainment', tip: 'Ask about MC services' },
+        { name: 'Rhythm & Romance', price: '$750-1,300', specialty: 'Custom playlists', tip: 'Discuss special song requests' }
       ],
       image: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=250&fit=crop'
     },
     florist: {
       emoji: '🌸',
       vendors: [
-        { name: 'Naples Floral Design', price: '$800-2,000', specialty: 'Asian-inspired arrangements', phone: '(239) 555-0129' },
-        { name: 'Tropical Blooms', price: '$600-1,500', specialty: 'Tropical flowers', phone: '(239) 555-0130' },
-        { name: 'Garden Gate Florist', price: '$700-1,800', specialty: 'Bridal bouquets', phone: '(239) 555-0131' }
+        { name: 'Elegant Floral Design', price: '$800-2,000', specialty: 'Custom arrangements', tip: 'Bring inspiration photos' },
+        { name: 'Garden Fresh Flowers', price: '$600-1,500', specialty: 'Seasonal blooms', tip: 'Ask about delivery timing' },
+        { name: 'Bridal Bouquet Boutique', price: '$700-1,800', specialty: 'Bridal accessories', tip: 'Consider preservation options' }
       ],
       image: 'https://images.unsplash.com/photo-1519434282235-f5e1901e8ac8?w=400&h=250&fit=crop'
     }
@@ -544,25 +563,35 @@ ${data.vendors.map((vendor, index) => `
 ✅ Perfect for ${style || 'your'} style  
 ✅ ${city} area specialist  
 ✅ Experienced with wedding events  
+✅ ${vendor.tip}
 
-**📞 ${vendor.phone}**  
-**🌐 Available for consultation**  
+**🔍 Search:** "${vendor.name.toLowerCase()} ${city.toLowerCase()}"  
+**💡 Tip:** Book consultation early  
 </div>
 
 ---
 `).join('')}
 
 ## 🎯 Next Steps
-1. **📞 Call for quotes** - Compare packages & pricing
+1. **📞 Research locally** - Search "${taskType} ${city}" online
 2. **📅 Check availability** - Confirm your wedding date
-3. **👀 View portfolios** - Request work samples
+3. **👀 View portfolios** - Request work samples and references
 4. **📝 Book consultation** - Meet in person or virtually
+5. **💰 Compare packages** - Get detailed quotes from 3+ vendors
 
 ## 💡 Questions to Ask
-- Portfolio of similar weddings?
-- Package inclusions & extras?
-- Backup plan for emergencies?
-- Timeline and setup requirements?
+- Can you show me a portfolio of similar weddings?
+- What packages do you offer and what's included?
+- Do you have a backup plan for emergencies?
+- What are your setup and timeline requirements?
+- How far in advance do you book up?
+
+## 🔍 Where to Find ${taskType}s in ${city}
+- **The Knot:** Search local vendor directory
+- **WeddingWire:** Read reviews and view portfolios  
+- **Google:** "${taskType} near ${city}" + read reviews
+- **Instagram:** #${city.toLowerCase()}${taskType.toLowerCase()} #${city.toLowerCase()}wedding
+- **Facebook:** Local wedding groups and recommendations
 </div>
   `;
 }
@@ -717,9 +746,10 @@ function generateAccommodationGuide(args: any): string {
 ✅ Wedding group discounts  
 ✅ Shuttle service available  
 ✅ Premium amenities  
+✅ Concierge services
 
-**📞 (239) 555-0150**  
-**🌐 Book group rates early**
+**🔍 Search:** "luxury hotels ${city} wedding blocks"  
+**💡 Tip:** Book group rates 6+ months early
 </div>
 
 ---
@@ -730,12 +760,13 @@ function generateAccommodationGuide(args: any): string {
 
 **💰 $120-250/night** | **⭐ 3-4 star rating**
 
-✅ Beach access  
+✅ Comfortable accommodations  
 ✅ Wedding party rates  
 ✅ Continental breakfast  
+✅ Pool and recreation areas
 
-**📞 (239) 555-0151**  
-**🌐 Perfect for families**
+**🔍 Search:** "hotels near ${city} wedding venues"  
+**💡 Tip:** Perfect for families and budget-conscious guests
 </div>
 
 ---
@@ -749,9 +780,10 @@ function generateAccommodationGuide(args: any): string {
 ✅ Clean & comfortable  
 ✅ Group booking discounts  
 ✅ Close to venue  
+✅ Basic amenities included
 
-**📞 (239) 555-0152**  
-**🌐 Great value option**
+**🔍 Search:** "affordable hotels ${city}"  
+**💡 Tip:** Great value option for extended stays
 </div>
 
 ## 🎯 Next Steps for ${guestCount || 20} guests
@@ -759,12 +791,21 @@ function generateAccommodationGuide(args: any): string {
 2. **📞 Negotiate group rates** - 10+ rooms get discounts
 3. **📧 Share recommendations** - Include on wedding website
 4. **📅 Set booking deadline** - 2 months before wedding
+5. **🗺️ Consider location** - Distance from venue and airport
 
 ## 💡 Booking Tips
 - Reserve room blocks 6+ months ahead
 - Include hotel info on invitations
 - Consider shuttle service coordination
 - Ask about wedding guest amenities
+- Get group rate contracts in writing
+
+## 🔍 Where to Search
+- **Hotels.com:** Group booking options
+- **Booking.com:** Compare rates and locations
+- **Google Maps:** "hotels near [your venue address]"
+- **Wedding venue:** Ask for recommended accommodations
+- **Local tourism board:** ${city} visitor information
 </div>
   `;
 }
@@ -840,7 +881,7 @@ function createTimeline(args: any): string {
 
 ${monthsUntil >= 6 ? '✅ **Plenty of time!**' : monthsUntil >= 3 ? '⚠️ **Book soon!**' : '🚨 **Book immediately!**'}
 
-### 🎯 **Action Plan:**
+### 💡 **Action Plan:**
 1. **This week:** Start research & get quotes
 2. **Next 2 weeks:** Schedule meetings/tours  
 3. **Month 1:** Make final decision & book

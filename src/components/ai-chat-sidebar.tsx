@@ -31,7 +31,41 @@ export function AIChatSidebar({ isOpen, onClose, initialTask }: AIChatSidebarPro
   const [activeChatId, setActiveChatId] = useState<string>('');
   const [inputMessage, setInputMessage] = useState('');
   const [isMinimized, setIsMinimized] = useState(false);
+  const [weddingDetails, setWeddingDetails] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Fetch wedding details
+  useEffect(() => {
+    async function fetchWedding() {
+      setLoading(true);
+      try {
+        console.log('AI Chat: Fetching wedding data from API...');
+        
+        const response = await fetch('/api/wedding');
+        const result = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(result.error || 'Failed to fetch wedding details');
+        }
+        
+        console.log('AI Chat: API response:', result);
+        
+        if (result.data) {
+          setWeddingDetails(result.data);
+        } else {
+          console.log('AI Chat: No wedding details found');
+          setWeddingDetails(null);
+        }
+      } catch (err) {
+        console.error('AI Chat: Error fetching wedding details:', err);
+        setWeddingDetails(null);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchWedding();
+  }, []);
 
   // Handle initial task or new task
   useEffect(() => {
@@ -139,7 +173,8 @@ export function AIChatSidebar({ isOpen, onClose, initialTask }: AIChatSidebarPro
         body: JSON.stringify({ 
           task: currentChat.task,
           message: isInitial ? undefined : message,
-          chatHistory: currentChat.messages.slice(-10) // Send last 10 messages for context
+          chatHistory: currentChat.messages.slice(-10), // Send last 10 messages for context
+          weddingDetails: weddingDetails // Add wedding details to context
         }),
         signal: controller.signal
       });
