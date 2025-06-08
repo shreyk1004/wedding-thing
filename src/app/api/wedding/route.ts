@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { weddingDetailsSchema } from '@/types/wedding';
 import { getSupabaseClient } from '@/lib/supabase';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
 import { z } from 'zod';
 
 const WeddingCreateSchema = z.object({
@@ -32,6 +30,33 @@ const WeddingUpdateSchema = z.object({
   budget: z.number().optional(),
 });
 
+// Helper function to get user from authorization header
+async function getUserFromAuth(request: NextRequest) {
+  const authHeader = request.headers.get('authorization');
+  if (!authHeader?.startsWith('Bearer ')) {
+    return null;
+  }
+
+  const token = authHeader.split(' ')[1];
+  const supabaseAdmin = getSupabaseClient(true);
+  
+  try {
+    const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+    if (error || !user) return null;
+    return user;
+  } catch {
+    return null;
+  }
+}
+
+// Helper function to get user from middleware (more reliable)
+async function getUserFromMiddleware(request: NextRequest) {
+  const userHeader = request.headers.get('x-user-id');
+  if (!userHeader) return null;
+  
+  return { id: userHeader };
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -40,10 +65,8 @@ export async function POST(request: NextRequest) {
     // Validate the input data
     const validatedData = WeddingCreateSchema.parse(body);
 
-    // Get the authenticated user
-    const supabase = createRouteHandlerClient({ cookies });
-    const { data: { user } } = await supabase.auth.getUser();
-
+    // Get user ID from middleware header (set by our middleware)
+    const user = await getUserFromMiddleware(request);
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -75,12 +98,10 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    // Get the authenticated user
-    const supabase = createRouteHandlerClient({ cookies });
-    const { data: { user } } = await supabase.auth.getUser();
-
+    // Get user ID from middleware header
+    const user = await getUserFromMiddleware(request);
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -113,10 +134,8 @@ export async function PUT(request: NextRequest) {
     // Validate the input data
     const validatedData = WeddingUpdateSchema.parse(body);
 
-    // Get the authenticated user
-    const supabase = createRouteHandlerClient({ cookies });
-    const { data: { user } } = await supabase.auth.getUser();
-
+    // Get user ID from middleware header
+    const user = await getUserFromMiddleware(request);
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }

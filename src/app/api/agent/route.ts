@@ -1,18 +1,23 @@
 import OpenAI from 'openai';
 import { getSupabaseClient } from '@/lib/supabase';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
+import { NextRequest } from 'next/server';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
-export async function POST(req: Request) {
+// Helper function to get user from middleware header
+function getUserFromMiddleware(request: NextRequest) {
+  const userHeader = request.headers.get('x-user-id');
+  if (!userHeader) return null;
+  
+  return { id: userHeader };
+}
+
+export async function POST(req: NextRequest) {
   const { task, extraInfo, messages } = await req.json();
 
-  // Get the authenticated user
-  const supabase = createRouteHandlerClient({ cookies });
-  const { data: { session } } = await supabase.auth.getSession();
-
-  if (!session) {
+  // Get user ID from middleware header
+  const user = getUserFromMiddleware(req);
+  if (!user) {
     return new Response(
       JSON.stringify({ reply: 'Please log in to access AI assistance.' }),
       { status: 401, headers: { 'Content-Type': 'application/json' } }
@@ -28,7 +33,7 @@ export async function POST(req: Request) {
   const { data: weddingRows, error: weddingError } = await supabaseAdmin
     .from('weddings')
     .select('*')
-    .eq('user_id', session.user.id)
+    .eq('user_id', user.id)
     .order('created_at', { ascending: false })
     .limit(1);
   
