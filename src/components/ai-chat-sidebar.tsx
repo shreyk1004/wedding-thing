@@ -298,12 +298,6 @@ export function AIChatSidebar({ isOpen, onClose, initialTask }: AIChatSidebarPro
 
   return (
     <>
-      {/* Backdrop overlay */}
-      <div 
-        className="fixed inset-0 bg-black bg-opacity-50 z-40 transition-opacity duration-300"
-        onClick={onClose}
-      />
-      
       {/* Sidebar */}
       <div 
         className={`fixed right-0 top-0 h-full bg-white shadow-2xl border-l-2 border-gray-400 z-50 transition-all duration-300 ${
@@ -317,7 +311,6 @@ export function AIChatSidebar({ isOpen, onClose, initialTask }: AIChatSidebarPro
           backgroundColor: '#ffffff',
           boxShadow: '-4px 0 20px rgba(0, 0, 0, 0.25)'
         }}
-        onClick={(e) => e.stopPropagation()}
       >
       {/* Header */}
       <div className="bg-gradient-to-r from-blue-600 to-purple-700 p-4 flex items-center justify-between shadow-lg">
