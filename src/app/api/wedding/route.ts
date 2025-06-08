@@ -19,6 +19,19 @@ const WeddingCreateSchema = z.object({
   budget: z.number().optional().default(0),
 });
 
+const WeddingUpdateSchema = z.object({
+  partner1name: z.string().optional(),
+  partner2name: z.string().optional(),
+  weddingdate: z.string().optional(),
+  city: z.string().optional(),
+  theme: z.string().optional(),
+  estimatedguestcount: z.number().optional(),
+  specialrequirements: z.array(z.string()).optional(),
+  contactemail: z.string().optional(),
+  phone: z.string().optional(),
+  budget: z.number().optional(),
+});
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -74,6 +87,47 @@ export async function GET() {
     return NextResponse.json({ data: data?.[0] || null });
   } catch (error) {
     console.error('Error in GET /api/wedding:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+export async function PUT(request: NextRequest) {
+  try {
+    const body = await request.json();
+    console.log('PUT /api/wedding - Request body:', body);
+
+    // Validate the input data
+    const validatedData = WeddingUpdateSchema.parse(body);
+
+    // Get the authenticated user
+    const supabase = createServerComponentClient({ cookies });
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const supabaseAdmin = getSupabaseClient(true);
+    
+    // Update the user's most recent wedding
+    const { data, error } = await supabaseAdmin
+      .from('weddings')
+      .update(validatedData)
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Supabase error:', error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    console.log('PUT /api/wedding - Updated data:', data);
+    return NextResponse.json({ data });
+  } catch (error) {
+    console.error('Error in PUT /api/wedding:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 } 
