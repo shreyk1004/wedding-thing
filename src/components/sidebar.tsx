@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { CheckSquare, Globe, Settings, MessageSquare, LogOut } from 'lucide-react';
+import { CheckSquare, Globe, Settings, MessageSquare, LogOut, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getSupabaseClient } from '@/lib/supabase';
 import { useAuth } from './auth-provider';
@@ -34,7 +34,12 @@ const allNavItems = [
   },
 ];
 
-export function Sidebar() {
+interface SidebarProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, loading } = useAuth();
@@ -79,62 +84,93 @@ export function Sidebar() {
     : allNavItems.filter((item) => item.id === 'chat');
 
   if (loading) {
-    // You might want a skeleton loader here
     return (
-        <div className="fixed top-0 left-0 w-80 h-screen bg-white z-10 border-r border-gray-200" />
+      <div className={cn(
+        "fixed top-0 left-0 w-80 h-screen bg-white z-30 border-r border-gray-200",
+        "lg:translate-x-0",
+        isOpen ? "translate-x-0" : "-translate-x-full"
+      )} />
     );
   }
-
+  
   return (
-    <div className="fixed top-0 left-0 w-80 h-screen bg-white z-10 border-r border-gray-200">
-      <div className="flex h-full flex-col justify-between p-4">
-        <div className="flex flex-col gap-4">
-          <h1 className="text-[#181511] text-base font-medium leading-normal">
-            Weddy
-          </h1>
+    <>
+      {/* Mobile overlay */}
+      <div
+        onClick={onClose}
+        className={cn(
+          "fixed inset-0 bg-black/60 z-20 transition-opacity lg:hidden",
+          isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+        )}
+        aria-hidden="true"
+      />
+
+      {/* Sidebar */}
+      <div className={cn(
+        "fixed top-0 left-0 w-80 h-screen bg-white z-30 border-r border-gray-200 transition-transform transform",
+        "lg:translate-x-0",
+        isOpen ? "translate-x-0" : "-translate-x-full"
+      )}>
+        <div className="flex h-full flex-col justify-between p-4">
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center justify-between mb-4">
+              <h1 className="text-[#181511] text-base font-medium leading-normal">
+                Weddy
+              </h1>
+              <button
+                type="button"
+                className="p-1 text-[#887863] hover:text-[#181511] lg:hidden"
+                onClick={onClose}
+              >
+                <span className="sr-only">Close sidebar</span>
+                <X className="h-6 w-6" aria-hidden="true" />
+              </button>
+            </div>
+            <div className="flex flex-col gap-2">
+              {navItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = pathname === item.href;
+                return (
+                  <Link
+                    key={item.id}
+                    href={item.href}
+                    onClick={onClose} // Close sidebar on mobile nav
+                    className={cn(
+                      'flex items-center gap-3 px-3 py-2 rounded-xl transition-colors',
+                      isActive
+                        ? 'bg-[#f4f3f0] text-[#181511]'
+                        : 'text-[#887863] hover:bg-[#f9f8f6] hover:text-[#181511]'
+                    )}
+                  >
+                    <Icon size={24} />
+                    <p className="text-sm font-medium leading-normal">
+                      {item.label}
+                    </p>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
           <div className="flex flex-col gap-2">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = pathname === item.href;
-              return (
-                <Link
-                  key={item.id}
-                  href={item.href}
-                  className={cn(
-                    'flex items-center gap-3 px-3 py-2 rounded-xl transition-colors',
-                    isActive
-                      ? 'bg-[#f4f3f0] text-[#181511]'
-                      : 'text-[#887863] hover:bg-[#f9f8f6] hover:text-[#181511]'
-                  )}
+            {user && (
+              <>
+                <button 
+                  onClick={handleLogout}
+                  className="flex items-center gap-3 px-3 py-2 rounded-xl text-[#887863] hover:bg-[#f9f8f6] hover:text-[#181511] transition-colors"
                 >
-                  <Icon size={24} />
+                  <LogOut size={24} />
                   <p className="text-sm font-medium leading-normal">
-                    {item.label}
+                    Sign Out
                   </p>
-                </Link>
-              );
-            })}
+                </button>
+                <button className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-10 px-4 bg-[#e89830] text-[#181511] text-sm font-bold leading-normal tracking-[0.015em] hover:bg-[#d88a29] transition-colors">
+                  <span className="truncate">Preview Website</span>
+                </button>
+              </>
+            )}
           </div>
         </div>
-        <div className="flex flex-col gap-2">
-          {user && (
-            <>
-              <button 
-                onClick={handleLogout}
-                className="flex items-center gap-3 px-3 py-2 rounded-xl text-[#887863] hover:bg-[#f9f8f6] hover:text-[#181511] transition-colors"
-              >
-                <LogOut size={24} />
-                <p className="text-sm font-medium leading-normal">
-                  Sign Out
-                </p>
-              </button>
-              <button className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-10 px-4 bg-[#e89830] text-[#181511] text-sm font-bold leading-normal tracking-[0.015em] hover:bg-[#d88a29] transition-colors">
-                <span className="truncate">Preview Website</span>
-              </button>
-            </>
-          )}
-        </div>
       </div>
-    </div>
+    </>
   );
 } 

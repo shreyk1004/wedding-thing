@@ -1,10 +1,10 @@
 import { Inter } from 'next/font/google';
 import './globals.css';
-import { Sidebar } from '@/components/sidebar';
 import { AuthProvider } from '@/components/auth-provider';
 import { ChatProvider } from '@/components/chat-provider';
 import type { ReactNode } from 'react';
 import type { Metadata } from "next";
+import { ResponsiveShell } from '@/components/responsive-shell';
 
 // Import all the fonts we'll use
 const fontFamilies = [
@@ -54,17 +54,12 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           rel="stylesheet"
         />
       </head>
-      <body className="relative flex size-full min-h-screen flex-col bg-gradient-to-br from-[#fefefe] to-[#f9f8f6] overflow-x-hidden">
+      <body className="relative size-full min-h-screen flex-col bg-gradient-to-br from-[#fefefe] to-[#f9f8f6] overflow-x-hidden">
         <AuthProvider>
           <ChatProvider>
-            <div className="flex h-full grow">
-              <Sidebar />
-              <div className="flex-1 flex justify-center">
-                <div className="w-full max-w-[960px] p-4">
-                  {children}
-                </div>
-              </div>
-            </div>
+            <ResponsiveShell>
+              {children}
+            </ResponsiveShell>
           </ChatProvider>
         </AuthProvider>
       </body>
