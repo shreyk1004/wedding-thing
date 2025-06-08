@@ -73,7 +73,7 @@ export function Sidebar() {
   };
 
   return (
-    <div className="w-80 min-h-screen bg-white">
+    <div className="fixed top-0 left-0 w-80 h-screen bg-white z-10 border-r border-gray-200">
       <div className="flex h-full flex-col justify-between p-4">
         <div className="flex flex-col gap-4">
           <h1 className="text-[#181511] text-base font-medium leading-normal">
