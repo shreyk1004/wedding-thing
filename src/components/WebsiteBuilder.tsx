@@ -352,6 +352,19 @@ export function WebsiteBuilder({ weddingData, isGenerating = false, onRegenerate
           
           return section;
         })}
+
+        {/* Wedly Branding Footer */}
+        <div className="text-center py-6 border-t border-gray-100">
+          <p 
+            className="text-sm opacity-60 hover:opacity-80 transition-opacity"
+            style={{ 
+              color: designRecipe.palette.primary,
+              fontFamily: designRecipe.fonts.body 
+            }}
+          >
+            built with Wedly ❤️
+          </p>
+        </div>
       </div>
 
       {/* Floating Regenerate Design Button - Only show in preview mode */}
