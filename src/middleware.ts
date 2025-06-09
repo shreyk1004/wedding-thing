@@ -54,6 +54,14 @@ export async function middleware(req: NextRequest) {
   const url = req.nextUrl;
   const hostname = req.headers.get('host')!;
   
+  // Debug environment variables for production debugging
+  const hasSupabaseUrl = !!supabaseUrl;
+  const hasAppDomain = !!process.env.APP_DOMAIN;
+  
+  // Debug logging for subdomain routing
+  console.log(`🔍 MIDDLEWARE: Processing ${hostname}${url.pathname}`);
+  console.log(`🔧 Environment: APP_DOMAIN=${hasAppDomain ? 'SET' : 'NOT_SET'}, SUPABASE_URL=${hasSupabaseUrl ? 'SET' : 'NOT_SET'}`);
+  
   // Development mode: support ?subdomain=test query parameter for testing
   const isDev = process.env.NODE_ENV === 'development';
   const testSubdomain = url.searchParams.get('subdomain');
@@ -66,8 +74,10 @@ export async function middleware(req: NextRequest) {
   }
   
   // Check for subdomain routing FIRST (before auth logic)
+  // First check for custom APP_DOMAIN
   if (process.env.APP_DOMAIN) {
     const appDomain = process.env.APP_DOMAIN;
+    console.log(`🔧 Checking custom domain: ${appDomain}`);
     
     // If hostname is a subdomain of our app domain, rewrite to /site/[subdomain]
     if (hostname.endsWith(`.${appDomain}`) && hostname !== appDomain) {
@@ -75,11 +85,40 @@ export async function middleware(req: NextRequest) {
       
       // Skip static files and API routes for subdomains
       if (!url.pathname.startsWith('/_next') && !url.pathname.startsWith('/api')) {
-        console.log(`🌐 SUBDOMAIN ROUTING: ${subdomain}.${appDomain} → /site/${subdomain}`);
+        console.log(`🌐 SUBDOMAIN ROUTING (custom): ${subdomain}.${appDomain} → /site/${subdomain}`);
         url.pathname = `/site/${subdomain}`;
         return NextResponse.rewrite(url);
       }
     }
+  }
+
+  // If no custom domain, check for auto-derived domain from Supabase
+  if (!process.env.APP_DOMAIN && supabaseUrl) {
+    try {
+      const supabaseHost = new URL(supabaseUrl).hostname;
+      const projectId = supabaseHost.split('.')[0];
+      const derivedDomain = `weddyapp-${projectId}.vercel.app`;
+      console.log(`🔧 Checking derived domain: ${derivedDomain} (from ${supabaseUrl})`);
+      console.log(`🔧 Hostname comparison: "${hostname}" ends with ".${derivedDomain}"? ${hostname.endsWith(`.${derivedDomain}`)}`);
+      
+      // If hostname is a subdomain of our derived domain, rewrite to /site/[subdomain]
+      if (hostname.endsWith(`.${derivedDomain}`) && hostname !== derivedDomain) {
+        const subdomain = hostname.split('.')[0];
+        
+        // Skip static files and API routes for subdomains
+        if (!url.pathname.startsWith('/_next') && !url.pathname.startsWith('/api')) {
+          console.log(`🌐 SUBDOMAIN ROUTING (derived): ${subdomain}.${derivedDomain} → /site/${subdomain}`);
+          url.pathname = `/site/${subdomain}`;
+          return NextResponse.rewrite(url);
+        }
+      } else {
+        console.log(`❌ No subdomain match: ${hostname} does not end with .${derivedDomain}`);
+      }
+    } catch (error) {
+      console.log(`⚠️ Failed to derive domain from Supabase URL: ${error}`);
+    }
+  } else if (!process.env.APP_DOMAIN) {
+    console.log(`❌ No domain configuration: APP_DOMAIN not set and Supabase URL: ${supabaseUrl || 'NOT_SET'}`);
   }
 
   const res = NextResponse.next();
