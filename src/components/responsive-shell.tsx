@@ -39,7 +39,7 @@ function ResponsiveShellContent({ children }: { children: React.ReactNode }) {
             <Menu className="h-6 w-6" aria-hidden="true" />
           </button>
           <div className="flex-1 text-center text-sm font-semibold leading-6 text-gray-900">
-            Weddy
+            Wedly
           </div>
         </header>
 

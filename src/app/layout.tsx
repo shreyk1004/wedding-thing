@@ -41,7 +41,7 @@ const fontFamilies = [
 ].join('&family=');
 
 export const metadata: Metadata = {
-  title: "Weddy - AI Wedding Planning Tool",
+  title: "Wedly - AI Wedding Planning Tool",
   description: "A modern, elegant wedding planning tool to help you organize your perfect day.",
 };
 
