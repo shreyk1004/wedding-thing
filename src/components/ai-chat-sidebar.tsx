@@ -31,7 +31,41 @@ export function AIChatSidebar({ isOpen, onClose, initialTask }: AIChatSidebarPro
   const [activeChatId, setActiveChatId] = useState<string>('');
   const [inputMessage, setInputMessage] = useState('');
   const [isMinimized, setIsMinimized] = useState(false);
+  const [weddingDetails, setWeddingDetails] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Fetch wedding details
+  useEffect(() => {
+    async function fetchWedding() {
+      setLoading(true);
+      try {
+        console.log('AI Chat: Fetching wedding data from API...');
+        
+        const response = await fetch('/api/wedding');
+        const result = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(result.error || 'Failed to fetch wedding details');
+        }
+        
+        console.log('AI Chat: API response:', result);
+        
+        if (result.data) {
+          setWeddingDetails(result.data);
+        } else {
+          console.log('AI Chat: No wedding details found');
+          setWeddingDetails(null);
+        }
+      } catch (err) {
+        console.error('AI Chat: Error fetching wedding details:', err);
+        setWeddingDetails(null);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchWedding();
+  }, []);
 
   // Handle initial task or new task
   useEffect(() => {
@@ -88,6 +122,11 @@ export function AIChatSidebar({ isOpen, onClose, initialTask }: AIChatSidebarPro
   const sendMessage = async (chatId: string, message: string, isInitial = false, chatData?: ChatSession) => {
     if ((!message.trim() && !isInitial) || !chatId) return;
 
+    // Clear the input field immediately for follow-up messages
+    if (!isInitial) {
+      setInputMessage('');
+    }
+
     console.log('Sending message:', { chatId, message, isInitial });
 
     // Get current chat session - use provided chatData if available, or find in current state
@@ -139,7 +178,8 @@ export function AIChatSidebar({ isOpen, onClose, initialTask }: AIChatSidebarPro
         body: JSON.stringify({ 
           task: currentChat.task,
           message: isInitial ? undefined : message,
-          chatHistory: currentChat.messages.slice(-10) // Send last 10 messages for context
+          chatHistory: currentChat.messages.slice(-10), // Send last 10 messages for context
+          weddingDetails: weddingDetails // Add wedding details to context
         }),
         signal: controller.signal
       });
@@ -204,8 +244,6 @@ export function AIChatSidebar({ isOpen, onClose, initialTask }: AIChatSidebarPro
           : session
       ));
     }
-
-    setInputMessage('');
   };
 
   const startNewChat = (task: Task) => {
@@ -252,44 +290,34 @@ export function AIChatSidebar({ isOpen, onClose, initialTask }: AIChatSidebarPro
     }
 
     // Enhanced formatting for assistant messages
-    let formatted = content;
+    // The content might contain pre-formatted HTML blocks (like venue cards).
+    // We need to apply markdown formatting only to the text parts, not the HTML.
+    
+    const htmlBlockRegex = /(<div class="[a-z-]+-cards">[\s\S]*?<\/div>)/g;
+    const parts = content.split(htmlBlockRegex);
 
-    // Convert numbered list items with links and images to attractive cards
-    formatted = formatted.replace(
-      /(\d+)\.\s*\[([^\]]+)\]\(([^)]+)\)\s*-\s*([^.]+\.)\s*([^.]+\.)\s*([^.]+\.)\s*!\[([^\]]+)\]\(([^)]+)\)/g,
-      (match, num, title, url, desc1, desc2, cost, altText, imgUrl) => {
-                 return `
-          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin: 12px 0; box-shadow: 0 1px 3px rgba(0,0,0,0.1); max-width: 100%; box-sizing: border-box;">
-            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-              <span style="background: #3b82f6; color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; flex-shrink: 0;">${num}</span>
-              <h3 style="color: #1e293b; font-size: 16px; font-weight: 600; margin: 0; word-wrap: break-word;">${title}</h3>
-            </div>
-            <img src="${imgUrl}" alt="${altText}" style="width: 100%; max-width: 100%; height: 120px; object-fit: cover; border-radius: 8px; margin: 8px 0; display: block;">
-            <p style="color: #475569; margin: 8px 0 4px 0; font-size: 14px; word-wrap: break-word;">${desc1.trim()}</p>
-            <p style="color: #475569; margin: 4px 0; font-size: 14px; word-wrap: break-word;">${desc2.trim()}</p>
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px; flex-wrap: wrap; gap: 8px;">
-              <span style="color: #059669; font-weight: 600; font-size: 14px; word-wrap: break-word;">💰 ${cost.replace('The cost ranges from ', '')}</span>
-              <a href="${url}" target="_blank" style="background: #3b82f6; color: white; padding: 6px 12px; border-radius: 6px; text-decoration: none; font-size: 12px; font-weight: 500; white-space: nowrap;">Visit Website</a>
-            </div>
-          </div>
-        `;
+    const formattedParts = parts.map((part, index) => {
+      // The captured HTML blocks will be at odd indices
+      if (index % 2 === 1) {
+        return part;
       }
-    );
 
-    // Handle remaining markdown patterns
-    formatted = formatted
-      .replace(/\*\*(.*?)\*\*/g, '<strong style="font-weight: 600; color: #1e293b;">$1</strong>')
-      .replace(/^\s*#\s+(.+)$/gm, '<h2 style="color: #1e293b; font-size: 18px; font-weight: bold; margin: 16px 0 8px 0; border-bottom: 2px solid #e2e8f0; padding-bottom: 4px;">$1</h2>')
-      .replace(/^\s*##\s+(.+)$/gm, '<h3 style="color: #1e293b; font-size: 16px; font-weight: 600; margin: 12px 0 6px 0;">$1</h3>')
-      .replace(/^\s*###\s+(.+)$/gm, '<h4 style="color: #1e293b; font-size: 14px; font-weight: 600; margin: 10px 0 4px 0;">$1</h4>')
-      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" style="color: #3b82f6; text-decoration: underline; font-weight: 500;">$1</a>')
-      .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="width: 100%; max-width: 300px; height: auto; border-radius: 8px; margin: 8px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">')
-      .replace(/✅/g, '<span style="color: #059669;">✅</span>')
-      .replace(/📞/g, '<span style="color: #3b82f6;">📞</span>')
-      .replace(/🌐/g, '<span style="color: #3b82f6;">🌐</span>')
-      .replace(/💰/g, '<span style="color: #059669;">💰</span>')
-      .replace(/\n\n/g, '<br/><br/>')
-      .replace(/\n/g, '<br/>');
+      // This is regular markdown text, apply formatting
+      return part
+        .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" style="color: #3b82f6; text-decoration: underline; font-weight: 500;">$1</a>')
+        .replace(/\*\*(.*?)\*\*/g, '<strong style="font-weight: 600; color: #1e293b;">$1</strong>')
+        .replace(/^\s*#\s+(.+)$/gm, '<h2 style="color: #1e293b; font-size: 18px; font-weight: bold; margin: 16px 0 8px 0; border-bottom: 2px solid #e2e8f0; padding-bottom: 4px;">$1</h2>')
+        .replace(/^\s*##\s+(.+)$/gm, '<h3 style="color: #1e293b; font-size: 16px; font-weight: 600; margin: 12px 0 6px 0;">$1</h3>')
+        .replace(/^\s*###\s+(.+)$/gm, '<h4 style="color: #1e293b; font-size: 14px; font-weight: 600; margin: 10px 0 4px 0;">$1</h4>')
+        .replace(/✅/g, '<span style="color: #059669;">✅</span>')
+        .replace(/📞/g, '<span style="color: #3b82f6;">📞</span>')
+        .replace(/🌐/g, '<span style="color: #3b82f6;">🌐</span>')
+        .replace(/💰/g, '<span style="color: #059669;">💰</span>')
+        .replace(/\n\n/g, '<br/><br/>')
+        .replace(/\n/g, '<br/>');
+    });
+
+    const formatted = formattedParts.join('');
 
     return `<div style="${baseColor} line-height: 1.5; max-width: 100%; overflow-wrap: break-word; word-wrap: break-word;">${formatted}</div>`;
   };
