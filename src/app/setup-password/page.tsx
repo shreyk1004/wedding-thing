@@ -18,7 +18,7 @@ export default function SetupPasswordPage() {
 
   useEffect(() => {
     // Get wedding details from localStorage or fetch from Supabase
-    const storedDetails = localStorage.getItem('weddingDetails');
+    const storedDetails = localStorage.getItem('pendingWeddingDetails');
     if (storedDetails) {
       const details = JSON.parse(storedDetails);
       setWeddingDetails(details);
@@ -103,7 +103,7 @@ export default function SetupPasswordPage() {
         }
 
         // Clear stored wedding details regardless of session state
-        localStorage.removeItem('weddingDetails');
+        localStorage.removeItem('pendingWeddingDetails');
 
         // Check if we have a session (user is immediately logged in)
         if (data.session) {

@@ -219,13 +219,6 @@ export async function middleware(req: NextRequest) {
       return NextResponse.redirect(redirectUrl);
     }
 
-    // If accessing public pages while authenticated, redirect to tasks
-    if (isPublicRoute && session) {
-      console.log(`↩️ REDIRECTING: ${pathname} → /tasks - Session found`);
-      const redirectUrl = new URL('/tasks', req.url);
-      return NextResponse.redirect(redirectUrl);
-    }
-
     // For API routes with valid session, add user ID header to avoid cookies issue
     if (pathname.startsWith('/api/') && session?.user?.id) {
       const response = NextResponse.next();
