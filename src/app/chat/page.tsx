@@ -3,9 +3,25 @@
 import { WeddingChat } from '@/components/WeddingChat';
 import { useAuth } from '@/components/auth-provider';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 
 export default function ChatPage() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && user) {
+      router.push('/tasks');
+    }
+  }, [user, loading, router]);
+
+  if (loading || user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
