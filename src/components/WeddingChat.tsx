@@ -94,6 +94,7 @@ export function WeddingChat() {
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(data.details),
             });
+            
             if (saveRes.ok) {
               setSaveSuccess(true);
               setHasSaved(true);
@@ -104,8 +105,15 @@ export function WeddingChat() {
                 id: responseData.data.id
               }));
             } else {
-              const err = await saveRes.text();
-              setSaveError(err || 'Failed to save details.');
+              // Handle authentication error gracefully
+              if (saveRes.status === 401) {
+                setSaveError('Please log in to save your wedding details. Your information is preserved for when you sign up!');
+                // Store details locally for later use
+                localStorage.setItem('pendingWeddingDetails', JSON.stringify(data.details));
+              } else {
+                const err = await saveRes.text();
+                setSaveError(err || 'Failed to save details.');
+              }
             }
           } catch (err: any) {
             setSaveError('Failed to save details.');
@@ -134,6 +142,7 @@ export function WeddingChat() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(details),
           });
+          
           if (saveRes.ok) {
             setSaveSuccess(true);
             setHasSaved(true);
@@ -144,8 +153,15 @@ export function WeddingChat() {
               id: responseData.data.id
             }));
           } else {
-            const err = await saveRes.text();
-            setSaveError(err || 'Failed to save details.');
+            // Handle authentication error gracefully
+            if (saveRes.status === 401) {
+              setSaveError('Please log in to save your wedding details. Your information is preserved for when you sign up!');
+              // Store details locally for later use
+              localStorage.setItem('pendingWeddingDetails', JSON.stringify(details));
+            } else {
+              const err = await saveRes.text();
+              setSaveError(err || 'Failed to save details.');
+            }
           }
         } catch (err: any) {
           setSaveError('Failed to save details.');

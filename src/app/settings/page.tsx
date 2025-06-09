@@ -21,6 +21,10 @@ export default function SettingsPage() {
         const result = await response.json();
         
         if (!response.ok) {
+          // Handle authentication error specifically
+          if (response.status === 401) {
+            throw new Error('Please log in to view your wedding details.');
+          }
           throw new Error(result.error || 'Failed to fetch wedding details');
         }
         

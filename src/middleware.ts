@@ -121,16 +121,16 @@ export async function middleware(req: NextRequest) {
 
     // Define public routes that don't require authentication
     const publicRoutes = ['/', '/chat', '/setup-password', '/login'];
-    const publicApiRoutes = ['/api/task-help', '/api/chat', '/api/agent', '/api/debug-session', '/api/test-cookie', '/api/sync-session', '/api/clear-session'];
+    const publicApiRoutes = ['/api/task-help', '/api/chat', '/api/agent', '/api/debug-session', '/api/test-cookie', '/api/sync-session', '/api/clear-session', '/api/wedding'];
     
     const isPublicRoute = publicRoutes.includes(pathname);
     const isPublicApiRoute = publicApiRoutes.some(route => 
       pathname.startsWith(route)
     );
 
-    // Special handling for /api/wedding - POST is public (onboarding), GET requires auth
+    // Special handling for /api/wedding - POST is public (onboarding), GET needs to reach handler for proper 401 response
     const isWeddingApiRoute = pathname === '/api/wedding';
-    const isWeddingApiPublic = isWeddingApiRoute && req.method === 'POST';
+    const isWeddingApiPublic = isWeddingApiRoute; // Allow all wedding API requests through
 
     // If accessing API routes without authentication (except public routes)
     if (pathname.startsWith('/api/') && !session && !isPublicApiRoute && !isWeddingApiPublic) {
