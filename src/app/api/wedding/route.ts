@@ -65,23 +65,11 @@ export async function POST(request: NextRequest) {
     // Validate the input data
     const validatedData = WeddingCreateSchema.parse(body);
 
-    // Get user ID from middleware header (set by our middleware)
-    const user = await getUserFromMiddleware(request);
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Add user_id to the wedding data
-    const weddingDataWithUser = {
-      ...validatedData,
-      user_id: user.id
-    };
-
     const supabaseAdmin = getSupabaseClient(true);
 
     const { data, error } = await supabaseAdmin
       .from('weddings')
-      .insert([weddingDataWithUser])
+      .insert([validatedData])
       .select()
       .single();
 

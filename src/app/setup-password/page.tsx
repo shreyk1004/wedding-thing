@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSupabaseClient } from '@/lib/supabase';
 import { Lock, Mail, Eye, EyeOff } from 'lucide-react';
+import { syncSessionToServer } from '@/lib/syncSession';
 
 export default function SetupPasswordPage() {
   const [email, setEmail] = useState('');
@@ -106,13 +107,19 @@ export default function SetupPasswordPage() {
 
         // Check if we have a session (user is immediately logged in)
         if (data.session) {
-          console.log('User has immediate session, redirecting to tasks');
+          console.log('User has immediate session, attempting to sync and redirect');
           
-          // Set the session in the client
-          await supabase.auth.setSession(data.session);
+          // Sync session with server to set cookies
+          const syncSuccess = await syncSessionToServer();
           
-          // Force a page refresh to ensure the session is properly set in cookies
-          window.location.href = '/tasks';
+          if (syncSuccess) {
+            console.log('Session sync successful, redirecting to /tasks');
+            window.location.href = '/tasks';
+          } else {
+            // Fallback for safety, though it might still cause a redirect loop
+            console.error('Session sync failed, redirecting anyway.');
+            window.location.href = '/tasks';
+          }
           return;
         } else {
           // No immediate session - check if email confirmation is required
@@ -127,12 +134,22 @@ export default function SetupPasswordPage() {
           console.log('Immediate sign-in attempt:', { signInData, signInError });
 
           if (signInData.session) {
-            console.log('Immediate sign-in successful, redirecting to tasks');
-            window.location.href = '/tasks';
+            console.log('Immediate sign-in successful, syncing session and redirecting');
+            const syncSuccess = await syncSessionToServer();
+            if (syncSuccess) {
+              window.location.href = '/tasks';
+            } else {
+              console.error('Session sync failed after sign-in, redirecting anyway.');
+              window.location.href = '/tasks';
+            }
             return;
           } else {
             // Sign-in failed, likely need email confirmation
-            setError('Account created! Please check your email and click the confirmation link to complete your account setup.');
+            let errorMessage = 'Account created! Please check your email and click the confirmation link to complete your account setup.';
+            if (signInError) {
+              errorMessage += ` (Error: ${signInError.message})`;
+            }
+            setError(errorMessage);
             return;
           }
         }
@@ -173,7 +190,7 @@ export default function SetupPasswordPage() {
           <div className="p-6">
             <div className="mb-6">
               <p className="text-sm text-gray-600 mb-2">
-                Hey {weddingDetails.partner1Name}! Thanks for sharing your wedding details.
+                Hey {weddingDetails.partner1name}! Thanks for sharing your wedding details.
               </p>
               <p className="text-sm text-gray-600">
                 Now let's secure your account so you can access your personalized planning tools.
