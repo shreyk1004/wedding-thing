@@ -13,6 +13,11 @@ function ResponsiveShellContent({ children }: { children: React.ReactNode }) {
   // Check if this is a subdomain request
   const subdomain = searchParams.get('subdomain');
 
+  // For landing page, return children directly without any wrapper (full-screen experience)
+  if (pathname === '/') {
+    return <>{children}</>;
+  }
+
   // Hide the shell for auth-related pages
   if (['/login', '/setup-password', '/forgot-password'].includes(pathname)) {
     return (
@@ -39,7 +44,7 @@ function ResponsiveShellContent({ children }: { children: React.ReactNode }) {
             <Menu className="h-6 w-6" aria-hidden="true" />
           </button>
           <div className="flex-1 text-center text-sm font-semibold leading-6 text-gray-900">
-            Weddy
+            Wedly
           </div>
         </header>
 

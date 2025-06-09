@@ -115,7 +115,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between mb-4">
               <h1 className="text-[#181511] text-base font-medium leading-normal">
-                Weddy
+                Wedly
               </h1>
               <button
                 type="button"
