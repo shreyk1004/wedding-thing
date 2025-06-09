@@ -1,18 +1,18 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { Sidebar } from './sidebar';
 import { Menu } from 'lucide-react';
 import { usePathname, useSearchParams } from 'next/navigation';
 
-export function ResponsiveShell({ children }: { children: React.ReactNode }) {
+function ResponsiveShellContent({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const pathname = usePathname();
   const searchParams = useSearchParams();
   
   // Check if this is a subdomain request
   const subdomain = searchParams.get('subdomain');
-  
+
   // Hide the shell for auth-related pages
   if (['/login', '/setup-password', '/forgot-password'].includes(pathname)) {
     return (
@@ -44,11 +44,25 @@ export function ResponsiveShell({ children }: { children: React.ReactNode }) {
         </header>
 
         <main className="flex-1 flex justify-center">
-            <div className="w-full max-w-[960px] p-4">
-                {children}
-            </div>
+          <div className="w-full max-w-[960px] p-4">
+            {children}
+          </div>
         </main>
       </div>
     </>
+  );
+}
+
+export function ResponsiveShell({ children }: { children: React.ReactNode }) {
+  return (
+    <Suspense fallback={
+      <div className="flex-1 flex justify-center">
+        <div className="w-full max-w-[960px] p-4">
+          {children}
+        </div>
+      </div>
+    }>
+      <ResponsiveShellContent>{children}</ResponsiveShellContent>
+    </Suspense>
   );
 } 
