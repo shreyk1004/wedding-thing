@@ -36,10 +36,14 @@ export function WeddingChat() {
 
   useEffect(() => {
     if (saveSuccess) {
+      console.log('saveSuccess is true, setting up redirect timer...');
       const timeout = setTimeout(() => {
+        console.log('Redirecting to /setup-password...');
         router.push('/setup-password');
       }, 2000);
       return () => clearTimeout(timeout);
+    } else {
+      console.log('saveSuccess is false, no redirect');
     }
   }, [saveSuccess, router]);
 
@@ -130,10 +134,14 @@ export function WeddingChat() {
       const details = extractWeddingDetails([...messages, userMessage, assistantMessage]);
       console.log('Extracted details:', details);
       const missingFields = requiredFields.filter(field => !(field in details));
+      console.log('Missing fields:', missingFields);
+      console.log('Required fields:', requiredFields);
       setMissingFields(missingFields);
       const isAllFieldsComplete = missingFields.length === 0;
+      console.log('Is all fields complete:', isAllFieldsComplete);
       setIsComplete(isAllFieldsComplete);
       if (isAllFieldsComplete && !hasSaved) {
+        console.log('All fields complete, attempting to save...');
         setIsSaving(true);
         setSaveError(null);
         try {
@@ -142,8 +150,8 @@ export function WeddingChat() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(details),
           });
-          
           if (saveRes.ok) {
+            console.log('Save successful, setting saveSuccess to true');
             setSaveSuccess(true);
             setHasSaved(true);
             const responseData = await saveRes.json();
@@ -153,21 +161,20 @@ export function WeddingChat() {
               id: responseData.data.id
             }));
           } else {
-            // Handle authentication error gracefully
-            if (saveRes.status === 401) {
-              setSaveError('Please log in to save your wedding details. Your information is preserved for when you sign up!');
-              // Store details locally for later use
-              localStorage.setItem('pendingWeddingDetails', JSON.stringify(details));
-            } else {
-              const err = await saveRes.text();
-              setSaveError(err || 'Failed to save details.');
-            }
+            const err = await saveRes.text();
+            console.error('Save failed:', err);
+            setSaveError(err || 'Failed to save details.');
           }
         } catch (err: any) {
+          console.error('Save error:', err);
           setSaveError('Failed to save details.');
         } finally {
           setIsSaving(false);
         }
+      } else if (!isAllFieldsComplete) {
+        console.log('Not all fields complete, missing:', missingFields);
+      } else if (hasSaved) {
+        console.log('Already saved, not saving again');
       }
     } catch (err) {
       console.error('Chat error:', err);

@@ -1,39 +1,34 @@
-import { supabase } from './supabase';
+import { getSupabaseClient } from './supabase';
 
 export async function syncSessionToServer() {
-  try {
-    // Get the current session from localStorage
-    const { data: { session }, error } = await supabase.auth.getSession();
-    
-    if (!session || error) {
-      console.log('No session to sync:', error?.message);
-      return false;
-    }
+  const supabase = getSupabaseClient();
+  const { data: { session } } = await supabase.auth.getSession();
 
-    // Make a request to sync the session with the server
+  if (!session) {
+    console.error('No session to sync.');
+    return false;
+  }
+
+  try {
     const response = await fetch('/api/sync-session', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.access_token}`
-      },
-      body: JSON.stringify({
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
         access_token: session.access_token,
         refresh_token: session.refresh_token,
-        expires_at: session.expires_at
+        expires_at: session.expires_at,
       }),
-      credentials: 'include'
     });
 
-    if (response.ok) {
-      console.log('✅ Session synced to server');
-      return true;
-    } else {
-      console.log('❌ Failed to sync session to server');
+    if (!response.ok) {
+      console.error('Failed to sync session to server');
       return false;
     }
+    
+    console.log('Session synced to server successfully');
+    return true;
   } catch (error) {
-    console.error('Session sync error:', error);
+    console.error('Error syncing session:', error);
     return false;
   }
 } 
