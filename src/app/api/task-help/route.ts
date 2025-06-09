@@ -409,10 +409,8 @@ function generateVenueCards(args: any): string {
 
 ## 🏛️ Top Venue Types to Consider in ${city}
 
-### 🌟 **Luxury Hotel/Resort**
+### 🌟 [**Luxury Hotel/Resort**](https://www.google.com/search?q=Luxury+Hotel+Resort+in+${encodeURIComponent(city)})
 <div class="venue-card">
-<img src="https://images.unsplash.com/photo-1519167758481-83f29d8ace68?w=400&h=250&fit=crop" alt="Luxury hotel resort" style="width: 100%; height: 200px; object-fit: cover; border-radius: 8px; margin: 10px 0;">
-
 **💰 $4,000-8,000** | **👥 Up to 200 guests** | **🏨 Full Service**
 
 ✅ Perfect for your ${guestCount} guests  
@@ -426,10 +424,8 @@ function generateVenueCards(args: any): string {
 
 ---
 
-### 🌸 **Garden/Botanical Venue**
+### 🌸 [**Garden/Botanical Venue**](https://www.google.com/search?q=Garden+or+Botanical+Venue+in+${encodeURIComponent(city)})
 <div class="venue-card">
-<img src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=250&fit=crop" alt="Beautiful garden venue" style="width: 100%; height: 200px; object-fit: cover; border-radius: 8px; margin: 10px 0;">
-
 **💰 $2,500-4,000** | **👥 Up to 150 guests** | **🌿 Natural Setting**
 
 ✅ Stunning natural backdrop  
@@ -443,10 +439,8 @@ function generateVenueCards(args: any): string {
 
 ---
 
-### 🏖️ **Waterfront/Beach Venue**
+### 🏖️ [**Waterfront/Beach Venue**](https://www.google.com/search?q=Waterfront+or+Beach+Venue+in+${encodeURIComponent(city)})
 <div class="venue-card">
-<img src="https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=400&h=250&fit=crop" alt="Beach wedding venue" style="width: 100%; height: 200px; object-fit: cover; border-radius: 8px; margin: 10px 0;">
-
 **💰 $3,000-5,500** | **👥 Up to 120 guests** | **🌅 Scenic Views**
 
 ✅ Intimate waterfront setting  
@@ -460,10 +454,8 @@ function generateVenueCards(args: any): string {
 
 ---
 
-### 🎨 **Historic/Cultural Venue**
+### 🎨 [**Historic/Cultural Venue**](https://www.google.com/search?q=Historic+or+Cultural+Venue+in+${encodeURIComponent(city)})
 <div class="venue-card">
-<img src="https://images.unsplash.com/photo-1464207687429-0a1dd7228f2d?w=400&h=250&fit=crop" alt="Historic elegant venue" style="width: 100%; height: 200px; object-fit: cover; border-radius: 8px; margin: 10px 0;">
-
 **💰 $2,800-4,500** | **👥 Up to 100 guests** | **🏛️ Character**
 
 ✅ Sophisticated ambiance  
@@ -477,10 +469,8 @@ function generateVenueCards(args: any): string {
 
 ---
 
-### 🏡 **Private Estate/Mansion**
+### 🏡 [**Private Estate/Mansion**](https://www.google.com/search?q=Private+Estate+or+Mansion+in+${encodeURIComponent(city)})
 <div class="venue-card">
-<img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=250&fit=crop" alt="Private estate venue" style="width: 100%; height: 200px; object-fit: cover; border-radius: 8px; margin: 10px 0;">
-
 **💰 $3,500-6,000** | **👥 Up to 130 guests** | **🏰 Exclusive**
 
 ✅ Private and intimate setting  
@@ -524,7 +514,6 @@ function generateVendorCards(args: any): string {
         { name: 'Classic Captures Studio', price: '$1,800-3,200', specialty: 'Traditional & candid shots', tip: 'Ask about engagement sessions' },
         { name: 'Modern Lens Photography', price: '$2,000-3,500', specialty: 'Contemporary wedding style', tip: 'Check social media reviews' }
       ],
-      image: 'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=400&h=250&fit=crop'
     },
     DJ: {
       emoji: '🎵',
@@ -533,7 +522,6 @@ function generateVendorCards(args: any): string {
         { name: 'Sound & Celebration DJs', price: '$600-1,200', specialty: 'Reception entertainment', tip: 'Ask about MC services' },
         { name: 'Rhythm & Romance', price: '$750-1,300', specialty: 'Custom playlists', tip: 'Discuss special song requests' }
       ],
-      image: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=250&fit=crop'
     },
     florist: {
       emoji: '🌸',
@@ -542,7 +530,6 @@ function generateVendorCards(args: any): string {
         { name: 'Garden Fresh Flowers', price: '$600-1,500', specialty: 'Seasonal blooms', tip: 'Ask about delivery timing' },
         { name: 'Bridal Bouquet Boutique', price: '$700-1,800', specialty: 'Bridal accessories', tip: 'Consider preservation options' }
       ],
-      image: 'https://images.unsplash.com/photo-1519434282235-f5e1901e8ac8?w=400&h=250&fit=crop'
     }
   };
 
@@ -554,10 +541,8 @@ function generateVendorCards(args: any): string {
 ## ${data.emoji} Top ${taskType} Recommendations in ${city}
 
 ${data.vendors.map((vendor, index) => `
-### ${index + 1}. **${vendor.name}**
+### ${index + 1}. [**${vendor.name}**](https://www.google.com/search?q=${encodeURIComponent(vendor.name)}+${encodeURIComponent(city)})
 <div class="vendor-card">
-<img src="${data.image}" alt="${taskType} service" style="width: 100%; height: 150px; object-fit: cover; border-radius: 8px; margin: 10px 0;">
-
 **💰 ${vendor.price}** | **🎯 ${vendor.specialty}**
 
 ✅ Perfect for ${style || 'your'} style  
@@ -602,62 +587,53 @@ function generateMenuCards(args: any): string {
   return `
 <div class="menu-cards">
 
-## 🍽️ Catering Options for ${guestCount} Guests
+## 🍽️ Catering Options for ${guestCount} Guests in ${city}
 
-### 🌟 **Premium Catering**
+### 🌟 [**Premium Catering**](https://www.google.com/search?q=Premium+Catering+in+${encodeURIComponent(city)})
 <div class="menu-card">
-<img src="https://images.unsplash.com/photo-1555244162-803834f70033?w=400&h=250&fit=crop" alt="Elegant wedding dinner" style="width: 100%; height: 150px; object-fit: cover; border-radius: 8px; margin: 10px 0;">
-
 **💰 $75-120 per person** | **🍴 3-course plated dinner**
 
-✅ Asian fusion menu options  
+✅ ${style || 'Customizable'} menu options  
 ✅ Dietary accommodations  
 ✅ Full service & bar  
 
-**Total Cost: $${Math.round(guestCount * 95).toLocaleString()}**
+**Total Cost Estimate: $${Math.round(guestCount * 95).toLocaleString()}**
 </div>
 
 ---
 
-### 🌸 **Asian Cuisine Specialists**
+### 🌿 [**Farm-to-Table Experience**](https://www.google.com/search?q=Farm+to+Table+Catering+in+${encodeURIComponent(city)})
 <div class="menu-card">
-<img src="https://images.unsplash.com/photo-1547573854-74d2a71d0826?w=400&h=250&fit=crop" alt="Asian wedding feast" style="width: 100%; height: 150px; object-fit: cover; border-radius: 8px; margin: 10px 0;">
+**💰 $60-100 per person** | **🥗 Buffet or family style**
 
-**💰 $50-80 per person** | **🥢 Family style dining**
+✅ Locally sourced ingredients  
+✅ Fresh, seasonal menu  
+✅ Rustic and charming presentation  
 
-✅ Authentic Asian dishes  
-✅ Vegetarian options  
-✅ Tea ceremony setup  
-
-**Total Cost: $${Math.round(guestCount * 65).toLocaleString()}**
+**Total Cost Estimate: $${Math.round(guestCount * 75).toLocaleString()}**
 </div>
 
 ---
 
-### 🏖️ **Casual Beach Style**
+### 🌮 [**Casual & Fun (Food Trucks)**](https://www.google.com/search?q=Food+Truck+Catering+for+Weddings+in+${encodeURIComponent(city)})
 <div class="menu-card">
-<img src="https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&h=250&fit=crop" alt="Beach wedding buffet" style="width: 100%; height: 150px; object-fit: cover; border-radius: 8px; margin: 10px 0;">
+**💰 $40-75 per person** | **🚚 Unique & memorable**
 
-**💰 $35-55 per person** | **🍤 Buffet style**
+✅ Wide variety of cuisine choices  
+✅ Fun, interactive guest experience  
+✅ Great for relaxed ${style || 'modern'} weddings  
 
-✅ Fresh seafood options  
-✅ Tropical themed menu  
-✅ Outdoor service friendly  
-
-**Total Cost: $${Math.round(guestCount * 45).toLocaleString()}**
+**Total Cost Estimate: $${Math.round(guestCount * 55).toLocaleString()}**
 </div>
 
 ## 🎯 Next Steps
-1. **📞 Request tastings** - Sample menu options
-2. **🤝 Meet caterers** - Discuss dietary needs
-3. **📋 Finalize menu** - 2 months before wedding
-4. **📄 Review contracts** - Service & payment terms
+1. **📞 Contact caterers** - Check availability and get sample menus
+2. **🍷 Schedule tastings** - Taste the food before you book
+3. **💬 Discuss options** - Talk about your budget and guest needs
+4. **📝 Review contracts** - Check for all-inclusive pricing
 
-## 💡 Menu Planning Tips
-- Book tastings 3-4 months ahead
-- Consider seasonal ingredients
-- Plan for 10% extra food
-- Include kids menu if needed
+## 💡 Pro Tip
+Ask about service charges, gratuity, and charges for extras like linens and flatware to avoid hidden costs.
 </div>
   `;
 }
@@ -668,49 +644,37 @@ function generateInvitationDesigns(args: any): string {
   return `
 <div class="invitation-cards">
 
-## 💌 ${theme} Wedding Invitation Ideas
+## 💌 Invitation Ideas for a ${theme} Wedding
 
-### 🌸 **Elegant Asian-Inspired**
+### 🎨 [**Modern & Minimalist**](https://www.google.com/search?q=Modern+Minimalist+wedding+invitations)
 <div class="invitation-card">
-<img src="https://images.unsplash.com/photo-1510906594845-bc082582c8cc?w=400&h=250&fit=crop" alt="Asian wedding invitation" style="width: 100%; height: 150px; object-fit: cover; border-radius: 8px; margin: 10px 0;">
+**✨ Clean lines & simple fonts**
 
-**💰 $3-6 per invitation**
-
-✅ Cherry blossom motifs  
-✅ Gold foil accents  
-✅ Traditional calligraphy  
-
-**Total Cost: $${Math.round(guestCount * 4.5).toLocaleString()}**
+✅ Perfect for a ${theme} theme  
+✅ Focus on typography  
+✅ High-quality paper  
 </div>
 
 ---
 
-### 🏖️ **Beach Destination Style**
+### 🌸 [**Floral & Romantic**](https://www.google.com/search?q=Floral+Romantic+wedding+invitations)
 <div class="invitation-card">
-<img src="https://images.unsplash.com/photo-1520150142028-22e4833a33f1?w=400&h=250&fit=crop" alt="Beach wedding invitation" style="width: 100%; height: 150px; object-fit: cover; border-radius: 8px; margin: 10px 0;">
+**🌿 Botanical illustrations & script fonts**
 
-**💰 $2-4 per invitation**
-
+✅ Complements a ${theme} wedding  
 ✅ Watercolor designs  
-✅ Coastal color palette  
-✅ RSVP cards included  
-
-**Total Cost: $${Math.round(guestCount * 3).toLocaleString()}**
+✅ Elegant and timeless  
 </div>
 
 ---
 
-### ✨ **Modern Minimalist**
+### 🎨 [**Bold & Typographic**](https://www.google.com/search?q=Bold+Typographic+wedding+invitations)
 <div class="invitation-card">
-<img src="https://images.unsplash.com/photo-1503759104275-d2c991c85304?w=400&h=250&fit=crop" alt="Modern wedding invitation" style="width: 100%; height: 150px; object-fit: cover; border-radius: 8px; margin: 10px 0;">
+**💥 Strong fonts & vibrant colors**
 
-**💰 $2-5 per invitation**
-
-✅ Clean typography  
-✅ Premium paper stock  
-✅ Digital RSVP options  
-
-**Total Cost: $${Math.round(guestCount * 3.5).toLocaleString()}**
+✅ Makes a statement  
+✅ Great for modern ${style || 'themes'}  
+✅ Unique and memorable  
 </div>
 
 ## 🎯 Next Steps
@@ -737,10 +701,8 @@ function generateAccommodationGuide(args: any): string {
 
 ## 🏨 Guest Accommodation in ${city}
 
-### 🌟 **Luxury Hotels**
+### 🌟 [**Luxury Hotels**](https://www.google.com/search?q=Luxury+Hotels+in+${encodeURIComponent(city)})
 <div class="hotel-card">
-<img src="https://images.unsplash.com/photo-1564501049412-61c2a3083791?w=400&h=250&fit=crop" alt="Luxury hotel room" style="width: 100%; height: 150px; object-fit: cover; border-radius: 8px; margin: 10px 0;">
-
 **💰 $200-400/night** | **⭐ 4-5 star rating**
 
 ✅ Wedding group discounts  
@@ -754,10 +716,8 @@ function generateAccommodationGuide(args: any): string {
 
 ---
 
-### 🏖️ **Mid-Range Resorts**
+### 🏖️ [**Mid-Range Resorts**](https://www.google.com/search?q=Mid-Range+Resorts+in+${encodeURIComponent(city)})
 <div class="hotel-card">
-<img src="https://images.unsplash.com/photo-1596394516093-501ba68a0ba6?w=400&h=250&fit=crop" alt="Beach resort" style="width: 100%; height: 150px; object-fit: cover; border-radius: 8px; margin: 10px 0;">
-
 **💰 $120-250/night** | **⭐ 3-4 star rating**
 
 ✅ Comfortable accommodations  
@@ -771,10 +731,8 @@ function generateAccommodationGuide(args: any): string {
 
 ---
 
-### 💰 **Budget-Friendly Options**
+### 💰 [**Budget-Friendly Options**](https://www.google.com/search?q=Budget-Friendly+Hotels+in+${encodeURIComponent(city)})
 <div class="hotel-card">
-<img src="https://images.unsplash.com/photo-1578774204375-2a8d5d9f3726?w=400&h=250&fit=crop" alt="Comfortable hotel" style="width: 100%; height: 150px; object-fit: cover; border-radius: 8px; margin: 10px 0;">
-
 **💰 $80-150/night** | **⭐ 2-3 star rating**
 
 ✅ Clean & comfortable  
