@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import Image from 'next/image';
+import { supabase } from '@/lib/supabase';
 
 interface WeddingFormData {
   bride: string;
@@ -12,6 +13,7 @@ interface WeddingFormData {
   theme: string;
   photos: string[];
   weddingId?: string;
+  subdomain?: string;
 }
 
 export function WebsiteTab() {
@@ -30,6 +32,35 @@ export function WebsiteTab() {
   const [isUploading, setIsUploading] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isDragging, setIsDragging] = useState(false);
+
+  // Publish-related state
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [publishSubdomain, setPublishSubdomain] = useState('');
+  const [publishMessage, setPublishMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Domain-related state
+  const [baseDomain, setBaseDomain] = useState<string>('your-domain.com');
+  const [isDomainLoading, setIsDomainLoading] = useState(true);
+
+  useEffect(() => {
+    // Fetch domain information
+    async function fetchDomainInfo() {
+      try {
+        const response = await fetch('/api/domain-info');
+        if (response.ok) {
+          const data = await response.json();
+          setBaseDomain(data.derivedDomain);
+        }
+      } catch (error) {
+        console.error('Failed to fetch domain info:', error);
+        // Keep default fallback
+      } finally {
+        setIsDomainLoading(false);
+      }
+    }
+
+    fetchDomainInfo();
+  }, []);
 
   useEffect(() => {
     async function fetchUserWeddingData() {
@@ -65,8 +96,14 @@ export function WebsiteTab() {
             venue: data.city || "",
             theme: data.theme || "",
             photos: (data.photos || []).filter(url => url && typeof url === 'string' && url.trim() !== ''),
-            weddingId: data.id
+            weddingId: data.id,
+            subdomain: data.subdomain || undefined
           });
+          
+          // Also set the publish subdomain if it exists
+          if (data.subdomain) {
+            setPublishSubdomain(data.subdomain);
+          }
         }
       } catch (err) {
         console.error('Error fetching wedding data:', err);
@@ -357,6 +394,49 @@ export function WebsiteTab() {
     }
   };
 
+  const handlePublish = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsPublishing(true);
+    setPublishMessage(null);
+
+    try {
+      const response = await fetch('/api/publish', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          subdomain: publishSubdomain,
+          weddingId: formData.weddingId
+        }),
+      });
+
+      const data = await response.json();
+      console.log('Publish API response:', data);
+      
+      if (!response.ok || data.error) {
+        throw new Error(data.error || 'Failed to publish website');
+      }
+
+      setPublishMessage({ 
+        type: 'success', 
+        text: `Website published successfully! Visit: ${data.url}` 
+      });
+      
+      // Update form data with subdomain
+      setFormData(prev => ({ ...prev, subdomain: publishSubdomain }));
+      
+    } catch (error) {
+      console.error('Error publishing website:', error);
+      setPublishMessage({ 
+        type: 'error', 
+        text: error instanceof Error ? error.message : 'Failed to publish website. Please try again.' 
+      });
+    } finally {
+      setIsPublishing(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="w-full bg-white flex items-center justify-center min-h-screen">
@@ -570,6 +650,100 @@ export function WebsiteTab() {
           <p>✨ Our AI will analyze your theme and create a beautiful, personalized website design just for you!</p>
         </div>
       </form>
+
+      {formData.weddingId && (
+        <div className="mt-8 p-8 border-t border-gray-200">
+          <h2 className="text-2xl font-semibold mb-4">
+            {formData.subdomain ? 'Update Published Website' : 'Publish Your Website'}
+          </h2>
+          <p className="text-base text-gray-600 mb-4">
+            {formData.subdomain 
+              ? 'Your website is already published. You can update the subdomain or view your live site.'
+              : 'Enter a subdomain to publish your website. Your domain is automatically derived from your Supabase project configuration.'
+            }
+          </p>
+          {formData.subdomain && (
+            <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+              <p className="text-sm text-green-800">
+                ✅ <strong>Currently published at:</strong> 
+                <a 
+                  href={`https://${formData.subdomain}.${baseDomain}`} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="font-mono text-green-900 hover:underline ml-1"
+                >
+                  https://{formData.subdomain}.{baseDomain}
+                </a>
+              </p>
+              <p className="text-xs text-green-600 mt-1">
+                🔗 Visit your live wedding website or update the subdomain below
+              </p>
+            </div>
+          )}
+          {!isDomainLoading && !formData.subdomain && (
+            <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+              <p className="text-sm text-gray-700">
+                💡 <strong>Auto-configured domain:</strong> <code className="bg-gray-100 px-1 rounded">{baseDomain}</code>
+              </p>
+              <p className="text-xs text-gray-600 mt-1">
+                To use a custom domain, add <code className="bg-gray-100 px-1 rounded">APP_DOMAIN=your-domain.com</code> to your .env.local file
+              </p>
+            </div>
+          )}
+          <form onSubmit={handlePublish} className="space-y-4">
+            <div className="space-y-2">
+              <label className="block text-sm font-medium" style={{ color: 'black' }}>
+                Subdomain
+              </label>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="text"
+                  value={publishSubdomain}
+                  onChange={(e) => setPublishSubdomain(e.target.value)}
+                  className="px-4 py-4 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  style={{ backgroundColor: 'white', color: 'black', borderRadius: '8px', height: '50px', width: '300px' }}
+                  placeholder="your-wedding"
+                  required
+                />
+                <span className="text-lg font-medium text-gray-700">
+                  .{isDomainLoading ? (
+                    <span className="animate-pulse bg-gray-200 rounded px-2 py-1">loading...</span>
+                  ) : (
+                    baseDomain
+                  )}
+                </span>
+              </div>
+              {publishSubdomain && !isDomainLoading && (
+                <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm text-blue-800">
+                    📍 Your website will be published at: <strong className="font-mono">https://{publishSubdomain}.{baseDomain}</strong>
+                  </p>
+                  <p className="text-xs text-blue-600 mt-1">
+                    🔗 Domain automatically derived from your Supabase project: <code className="bg-blue-100 px-1 rounded">{baseDomain}</code>
+                  </p>
+                </div>
+              )}
+            </div>
+            <div className="flex justify-center">
+              <button
+                type="submit"
+                disabled={isPublishing || !publishSubdomain}
+                className="px-8 py-4 bg-[#e89830] text-white rounded-lg hover:bg-[#d88a29] transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-lg font-semibold"
+              >
+                {isPublishing 
+                  ? (formData.subdomain ? 'Updating...' : 'Publishing...') 
+                  : (formData.subdomain ? '🔄 Update Website' : '🚀 Publish Website')
+                }
+              </button>
+            </div>
+          </form>
+          {publishMessage && (
+            <div className={`mt-4 p-4 rounded-lg ${publishMessage.type === 'success' ? 'bg-green-100 border border-green-400' : 'bg-red-100 border border-red-400'}`}>
+              {publishMessage.text}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 } 
