@@ -79,8 +79,13 @@ export async function middleware(req: NextRequest) {
     const appDomain = process.env.APP_DOMAIN;
     console.log(`🔧 Checking custom domain: ${appDomain}`);
     
-    // If hostname is a subdomain of our app domain, rewrite to /site/[subdomain]
-    if (hostname.endsWith(`.${appDomain}`) && hostname !== appDomain) {
+    // Check if this is a subdomain of our app domain
+    // We need to handle www specially - www.domain.com is NOT a subdomain
+    const isSubdomain = hostname.endsWith(`.${appDomain}`) && 
+                       hostname !== appDomain && 
+                       hostname !== `www.${appDomain}`;
+    
+    if (isSubdomain) {
       const subdomain = hostname.split('.')[0];
       
       // Skip static files and API routes for subdomains
@@ -89,6 +94,8 @@ export async function middleware(req: NextRequest) {
         url.pathname = `/site/${subdomain}`;
         return NextResponse.rewrite(url);
       }
+    } else {
+      console.log(`✅ MAIN DOMAIN: ${hostname} is treated as main domain (not subdomain)`);
     }
   }
 
