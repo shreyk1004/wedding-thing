@@ -46,6 +46,13 @@ export function AIChatSidebar({ isOpen, onClose, initialTask }: AIChatSidebarPro
         const result = await response.json();
         
         if (!response.ok) {
+          // If unauthorized (not logged in), just set wedding details to null without error
+          if (response.status === 401) {
+            console.log('AI Chat: User not authenticated, skipping wedding data fetch');
+            setWeddingDetails(null);
+            setLoading(false);
+            return;
+          }
           throw new Error(result.error || 'Failed to fetch wedding details');
         }
         
