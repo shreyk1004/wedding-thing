@@ -13,6 +13,11 @@ function ResponsiveShellContent({ children }: { children: React.ReactNode }) {
   // Check if this is a subdomain request
   const subdomain = searchParams.get('subdomain');
 
+  // For landing page, return children directly without any wrapper (full-screen experience)
+  if (pathname === '/') {
+    return <>{children}</>;
+  }
+
   // Hide the shell for auth-related pages
   if (['/login', '/setup-password', '/forgot-password'].includes(pathname)) {
     return (
