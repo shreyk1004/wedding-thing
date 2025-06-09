@@ -1,5 +1,7 @@
 export interface Task {
   id: string;
+  user_id: string;
+  created_at: string;
   title: string;
   status: 'todo' | 'done';
   category?: string;
