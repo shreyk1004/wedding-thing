@@ -45,9 +45,10 @@ interface WebsiteBuilderProps {
   weddingData: WeddingData;
   isGenerating?: boolean;
   onRegenerateDesign?: () => void;
+  mode?: 'preview' | 'fullsite';
 }
 
-export function WebsiteBuilder({ weddingData, isGenerating = false, onRegenerateDesign }: WebsiteBuilderProps) {
+export function WebsiteBuilder({ weddingData, isGenerating = false, onRegenerateDesign, mode = 'preview' }: WebsiteBuilderProps) {
   // Initialize with wedding design if it exists and is valid
   const getInitialDesign = (): DesignRecipe | null => {
     if (weddingData.design && 
@@ -310,17 +311,20 @@ export function WebsiteBuilder({ weddingData, isGenerating = false, onRegenerate
   };
 
   return (
-    <div className="min-h-screen flex justify-center p-4" style={{ backgroundColor: '#f5f5f5' }}>
-      {/* Self-contained preview container - acts like its own webpage */}
+    <div 
+      className={mode === 'preview' ? "min-h-screen flex justify-center p-4" : "min-h-screen"} 
+      style={{ backgroundColor: mode === 'preview' ? '#f5f5f5' : (designRecipe?.palette?.bg || '#ffffff') }}
+    >
+      {/* Website container - full width for fullsite mode, constrained for preview */}
       <div 
-        className="w-full max-w-[1200px] relative bg-white shadow-lg overflow-hidden"
+        className={mode === 'preview' ? "w-full max-w-[1200px] relative bg-white shadow-lg overflow-hidden" : "w-full relative overflow-hidden"}
         style={{ 
           backgroundColor: designRecipe?.palette?.bg || '#ffffff',
-          minHeight: '90vh',
-          borderRadius: '8px'
+          minHeight: mode === 'preview' ? '90vh' : '100vh',
+          borderRadius: mode === 'preview' ? '8px' : '0'
         }}
       >
-        {/* Universal Navigation Toolbar - positioned relative to preview container */}
+        {/* Universal Navigation Toolbar - positioned relative to container */}
         <Navigation 
           palette={designRecipe.palette}
           fonts={designRecipe.fonts}
@@ -350,8 +354,8 @@ export function WebsiteBuilder({ weddingData, isGenerating = false, onRegenerate
         })}
       </div>
 
-      {/* Floating Regenerate Design Button - Fixed position */}
-      {onRegenerateDesign && (
+      {/* Floating Regenerate Design Button - Only show in preview mode */}
+      {onRegenerateDesign && mode === 'preview' && (
         <div 
           className="fixed z-50"
           style={{ 
@@ -371,8 +375,8 @@ export function WebsiteBuilder({ weddingData, isGenerating = false, onRegenerate
         </div>
       )}
 
-      {/* Debug Info - Fixed to bottom right of viewport */}
-      {process.env.NODE_ENV === 'development' && designRecipe && (
+      {/* Debug Info - Only show in preview mode and development */}
+      {process.env.NODE_ENV === 'development' && designRecipe && mode === 'preview' && (
         <>
           {/* Minimized Debug Icon */}
           {!isDebugOpen && (

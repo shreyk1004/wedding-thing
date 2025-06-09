@@ -3,12 +3,16 @@
 import { useState } from 'react';
 import { Sidebar } from './sidebar';
 import { Menu } from 'lucide-react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 
 export function ResponsiveShell({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const pathname = usePathname();
-
+  const searchParams = useSearchParams();
+  
+  // Check if this is a subdomain request
+  const subdomain = searchParams.get('subdomain');
+  
   // Hide the shell for auth-related pages
   if (['/login', '/setup-password', '/forgot-password'].includes(pathname)) {
     return (
@@ -18,6 +22,11 @@ export function ResponsiveShell({ children }: { children: React.ReactNode }) {
         </div>
       </div>
     );
+  }
+
+  // For subdomain routes, return children directly without any shell
+  if (subdomain || pathname.startsWith('/site/')) {
+    return <>{children}</>;
   }
 
   return (

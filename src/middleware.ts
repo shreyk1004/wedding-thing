@@ -51,6 +51,37 @@ async function verifySession(token: string) {
 }
 
 export async function middleware(req: NextRequest) {
+  const url = req.nextUrl;
+  const hostname = req.headers.get('host')!;
+  
+  // Development mode: support ?subdomain=test query parameter for testing
+  const isDev = process.env.NODE_ENV === 'development';
+  const testSubdomain = url.searchParams.get('subdomain');
+  
+  if (isDev && testSubdomain && !url.pathname.startsWith('/_next') && !url.pathname.startsWith('/api')) {
+    console.log(`🧪 DEV MODE: Simulating subdomain "${testSubdomain}"`);
+    url.pathname = `/site/${testSubdomain}`;
+    url.searchParams.delete('subdomain'); // Clean up the URL
+    return NextResponse.rewrite(url);
+  }
+  
+  // Check for subdomain routing FIRST (before auth logic)
+  if (process.env.APP_DOMAIN) {
+    const appDomain = process.env.APP_DOMAIN;
+    
+    // If hostname is a subdomain of our app domain, rewrite to /site/[subdomain]
+    if (hostname.endsWith(`.${appDomain}`) && hostname !== appDomain) {
+      const subdomain = hostname.split('.')[0];
+      
+      // Skip static files and API routes for subdomains
+      if (!url.pathname.startsWith('/_next') && !url.pathname.startsWith('/api')) {
+        console.log(`🌐 SUBDOMAIN ROUTING: ${subdomain}.${appDomain} → /site/${subdomain}`);
+        url.pathname = `/site/${subdomain}`;
+        return NextResponse.rewrite(url);
+      }
+    }
+  }
+
   const res = NextResponse.next();
   
   // Skip middleware for browser internal requests and static assets
@@ -62,6 +93,7 @@ export async function middleware(req: NextRequest) {
     pathname.startsWith('/manifest') ||
     pathname.startsWith('/robots') ||
     pathname.startsWith('/sitemap') ||
+    pathname.startsWith('/site/') || // Skip auth for published sites
     pathname.includes('.') && !pathname.startsWith('/api/'); // Static files
   
   if (shouldSkip) {
@@ -121,7 +153,7 @@ export async function middleware(req: NextRequest) {
 
     // Define public routes that don't require authentication
     const publicRoutes = ['/', '/chat', '/setup-password', '/login'];
-    const publicApiRoutes = ['/api/task-help', '/api/chat', '/api/agent', '/api/debug-session', '/api/test-cookie', '/api/sync-session', '/api/clear-session', '/api/wedding'];
+    const publicApiRoutes = ['/api/task-help', '/api/chat', '/api/agent', '/api/debug-session', '/api/test-cookie', '/api/sync-session', '/api/clear-session', '/api/wedding', '/api/domain-info'];
     
     const isPublicRoute = publicRoutes.includes(pathname);
     const isPublicApiRoute = publicApiRoutes.some(route => 

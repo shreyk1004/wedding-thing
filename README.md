@@ -14,6 +14,15 @@ SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 
 # OpenAI Configuration
 OPENAI_API_KEY=your_openai_api_key
+
+# Domain Configuration (Optional)
+# If not set, domain will be automatically derived from your Supabase project URL
+# Format: your-domain.com (without https:// or subdomain)
+APP_DOMAIN=your-custom-domain.com
+
+# Vercel Configuration (Optional - for production deployment)
+VERCEL_PROJECT_ID=your_vercel_project_id
+VERCEL_API_TOKEN=your_vercel_api_token
 ```
 
 ## Supabase RLS Setup
@@ -59,6 +68,28 @@ FOR UPDATE USING (auth.uid() IS NOT NULL);
 - 🏨 **Guest Accommodation**: Manage hotel bookings
 - 🤖 **AI Assistant**: Get personalized wedding planning help
 - 📱 **Responsive Design**: Works on all devices
+- 🌐 **Subdomain Publishing**: Publish wedding websites to custom subdomains
+
+## Subdomain Publishing
+
+The app supports publishing wedding websites to custom subdomains. The base domain is automatically inherited from your Supabase configuration:
+
+### How It Works
+1. **Automatic Domain Detection**: The base domain is derived from your `NEXT_PUBLIC_SUPABASE_URL`
+2. **Custom Override**: Set `APP_DOMAIN` in `.env.local` to use a custom domain instead
+3. **Subdomain Creation**: Users can publish their wedding website to `[subdomain].[base-domain]`
+
+### Example
+- Supabase URL: `https://atwcovxfbxxdrecjsfyy.supabase.co`
+- Generated domain: `weddyapp-atwcovxfbxxdrecjsfyy.vercel.app`
+- Published website: `john-sarah.weddyapp-atwcovxfbxxdrecjsfyy.vercel.app`
+
+### Custom Domain
+To use your own domain, add to `.env.local`:
+```bash
+APP_DOMAIN=your-wedding-domain.com
+```
+Then published websites will use: `[subdomain].your-wedding-domain.com`
 
 ## Getting Started
 
