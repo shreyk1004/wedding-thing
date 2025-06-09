@@ -62,28 +62,15 @@ export async function middleware(req: NextRequest) {
   console.log(`🔍 MIDDLEWARE: Processing ${hostname}${url.pathname}`);
   console.log(`🔧 Environment: APP_DOMAIN=${hasAppDomain ? 'SET' : 'NOT_SET'}, SUPABASE_URL=${hasSupabaseUrl ? 'SET' : 'NOT_SET'}`);
   
-  // Development mode: Enhanced subdomain testing
+  // Development mode: support ?subdomain=test query parameter for testing
   const isDev = process.env.NODE_ENV === 'development';
+  const testSubdomain = url.searchParams.get('subdomain');
   
-  if (isDev) {
-    // Method 1: Query parameter testing (?subdomain=test)
-    const testSubdomain = url.searchParams.get('subdomain');
-    if (testSubdomain && !url.pathname.startsWith('/_next') && !url.pathname.startsWith('/api')) {
-      console.log(`🧪 DEV MODE (query): Simulating subdomain "${testSubdomain}"`);
-      url.pathname = `/site/${testSubdomain}`;
-      url.searchParams.delete('subdomain'); // Clean up the URL
-      return NextResponse.rewrite(url);
-    }
-    
-    // Method 2: Test subdomain detection (test-wedding.localhost:3000)
-    if (hostname.includes('localhost') && hostname.includes('.')) {
-      const subdomain = hostname.split('.')[0];
-      if (subdomain !== 'localhost' && !url.pathname.startsWith('/_next') && !url.pathname.startsWith('/api')) {
-        console.log(`🧪 DEV MODE (localhost subdomain): Detected "${subdomain}"`);
-        url.pathname = `/site/${subdomain}`;
-        return NextResponse.rewrite(url);
-      }
-    }
+  if (isDev && testSubdomain && !url.pathname.startsWith('/_next') && !url.pathname.startsWith('/api')) {
+    console.log(`🧪 DEV MODE: Simulating subdomain "${testSubdomain}"`);
+    url.pathname = `/site/${testSubdomain}`;
+    url.searchParams.delete('subdomain'); // Clean up the URL
+    return NextResponse.rewrite(url);
   }
   
   // Check for subdomain routing FIRST (before auth logic)
