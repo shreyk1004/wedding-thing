@@ -37,7 +37,7 @@ const schema = {
         type: 'object',
         properties: {
           title: { type: 'string' },
-          description: { type: 'string' }
+          description: { type: 'string', description: 'Optional description for the task' }
         },
         required: ['title']
       }

@@ -79,26 +79,55 @@ export default function SetupPasswordPage() {
           sessionExists: !!data.session
         });
 
-        // Always try to link the wedding record, regardless of email confirmation
-        if (weddingDetails?.id) {
+        if (weddingDetails) {
           try {
-            console.log('Linking wedding record:', weddingDetails.id, 'to user:', data.user.id);
+            console.log('Attempting to save wedding details for new user:', data.user.id);
             
-            const { error: updateError } = await supabase
-              .from('weddings')
-              .update({ 
-                user_id: data.user.id,
-                contactemail: email 
-              })
-              .eq('id', weddingDetails.id);
+            // Separate tasks from the main details
+            const { tasks, ...mainDetails } = weddingDetails;
 
-            if (updateError) {
-              console.error('Failed to link wedding details to user:', updateError);
-            } else {
-              console.log('Successfully linked wedding record to user');
+            // 1. Insert the main wedding record
+            const { data: wedding, error: weddingError } = await supabase
+              .from('weddings')
+              .insert({
+                ...mainDetails,
+                user_id: data.user.id,
+                contactemail: email, // ensure email is up-to-date
+              })
+              .select()
+              .single();
+
+            if (weddingError) {
+              console.error('Failed to save wedding details:', weddingError);
+              throw weddingError; // Abort if the main record fails
             }
-          } catch (linkError) {
-            console.error('Error linking wedding details:', linkError);
+
+            console.log('Successfully saved main wedding details:', wedding.id);
+
+            // 2. If there are tasks, insert them
+            if (tasks && Array.isArray(tasks) && tasks.length > 0) {
+              console.log(`Attempting to save ${tasks.length} tasks...`);
+              const tasksToInsert = tasks.map((task: any) => ({
+                ...task,
+                user_id: data.user.id,
+                wedding_id: wedding.id, // Link tasks to the wedding record
+                status: 'todo',
+              }));
+
+              const { error: tasksError } = await supabase
+                .from('tasks')
+                .insert(tasksToInsert);
+
+              if (tasksError) {
+                console.error('Failed to save tasks:', tasksError);
+                // Note: In a real-world scenario, you might want to handle this
+                // by deleting the wedding record in a transaction.
+              } else {
+                console.log('Successfully saved tasks.');
+              }
+            }
+          } catch (saveError) {
+            console.error('Caught error saving wedding/task details:', saveError);
           }
         }
 
