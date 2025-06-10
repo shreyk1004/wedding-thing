@@ -642,7 +642,7 @@ export function WebsiteTab() {
             disabled={isUploading || !formData.bride || !formData.groom || !formData.date || !formData.venue || !formData.theme}
             className="px-8 py-4 bg-[#e89830] text-white rounded-lg hover:bg-[#d88a29] transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-lg font-semibold"
           >
-            {isUploading ? 'Saving...' : (formData.weddingId ? '🎨 Update & Generate Website' : '🎨 Create AI Wedding Website')}
+            {isUploading ? 'Saving...' : (formData.weddingId ? 'Generate Preview' : 'Create AI Wedding Website')}
           </button>
         </div>
         
@@ -662,79 +662,70 @@ export function WebsiteTab() {
               : 'Enter a subdomain to publish your website. Your domain is automatically derived from your Supabase project configuration.'
             }
           </p>
-          {formData.subdomain && (
-            <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-              <p className="text-sm text-green-800">
-                ✅ <strong>Currently published at:</strong> 
-                <a 
-                  href={`https://${formData.subdomain}.${baseDomain}`} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="font-mono text-green-900 hover:underline ml-1"
-                >
-                  https://{formData.subdomain}.{baseDomain}
-                </a>
-              </p>
-              <p className="text-xs text-green-600 mt-1">
-                🔗 Visit your live wedding website or update the subdomain below
-              </p>
-            </div>
-          )}
-          {!isDomainLoading && !formData.subdomain && (
-            <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
-              <p className="text-sm text-gray-700">
-                💡 <strong>Auto-configured domain:</strong> <code className="bg-gray-100 px-1 rounded">{baseDomain}</code>
-              </p>
-              <p className="text-xs text-gray-600 mt-1">
-                To use a custom domain, add <code className="bg-gray-100 px-1 rounded">APP_DOMAIN=your-domain.com</code> to your .env.local file
-              </p>
-            </div>
-          )}
+          
           <form onSubmit={handlePublish} className="space-y-4">
-            <div className="space-y-2">
+            <div className="space-y-4">
               <label className="block text-sm font-medium" style={{ color: 'black' }}>
                 Subdomain
               </label>
-              <div className="flex items-center space-x-2">
-                <input
-                  type="text"
-                  value={publishSubdomain}
-                  onChange={(e) => setPublishSubdomain(e.target.value)}
-                  className="px-4 py-4 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  style={{ backgroundColor: 'white', color: 'black', borderRadius: '8px', height: '50px', width: '300px' }}
-                  placeholder="your-wedding"
-                  required
-                />
-                <span className="text-lg font-medium text-gray-700">
-                  .{isDomainLoading ? (
-                    <span className="animate-pulse bg-gray-200 rounded px-2 py-1">loading...</span>
-                  ) : (
-                    baseDomain
-                  )}
-                </span>
-              </div>
-              {publishSubdomain && !isDomainLoading && (
-                <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                  <p className="text-sm text-blue-800">
-                    📍 Your website will be published at: <strong className="font-mono">https://{publishSubdomain}.{baseDomain}</strong>
-                  </p>
-                  <p className="text-xs text-blue-600 mt-1">
-                    🔗 Domain automatically derived from your Supabase project: <code className="bg-blue-100 px-1 rounded">{baseDomain}</code>
-                  </p>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <input
+                    type="text"
+                    value={publishSubdomain}
+                    onChange={(e) => setPublishSubdomain(e.target.value)}
+                    className="mr-2 px-4 py-4 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    style={{ backgroundColor: 'white', color: 'black', borderRadius: '8px', height: '50px', width: '300px' }}
+                    placeholder="your-wedding"
+                    required
+                  />
+                  <span className="text-lg font-medium text-gray-700">
+                    .{isDomainLoading ? (
+                      <span className="animate-pulse bg-gray-200 rounded px-2 py-1">loading...</span>
+                    ) : (
+                      baseDomain
+                    )}
+                  </span>
                 </div>
-              )}
-            </div>
-            <div className="flex justify-center">
-              <button
-                type="submit"
-                disabled={isPublishing || !publishSubdomain}
-                className="px-8 py-4 bg-[#e89830] text-white rounded-lg hover:bg-[#d88a29] transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-lg font-semibold"
-              >
-                {isPublishing 
-                  ? (formData.subdomain ? 'Updating...' : 'Publishing...') 
-                  : (formData.subdomain ? '🔄 Update Website' : '🚀 Publish Website')
-                }
-              </button>
+                <button
+                  type="submit"
+                  disabled={isPublishing || !publishSubdomain}
+                  className="px-6 py-3 bg-[#e89830] text-white rounded-lg hover:bg-[#d88a29] transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
+                >
+                  {isPublishing 
+                    ? (formData.subdomain ? 'Updating...' : 'Publishing...') 
+                    : (formData.subdomain ? 'Update Website' : '🚀 Publish Website')
+                  }
+                </button>
+              </div>
+              
+              {/* Status Box - moved below the subdomain field */}
+              <div className={`mt-2 p-3 rounded-lg border ${
+                formData.subdomain 
+                  ? 'bg-green-50 border-green-200' 
+                  : 'bg-gray-50 border-gray-200'
+              }`}>
+                {formData.subdomain ? (
+                  <div className="flex items-center justify-between text-sm font-medium text-green-800 px-4">
+                    <span>
+                      Published at <a 
+                        href={`https://${formData.subdomain}.${baseDomain}`} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="underline hover:no-underline"
+                      >
+                        {formData.subdomain}.{baseDomain}
+                      </a>
+                    </span>
+                    <span className="mx-8">•</span>
+                    <span>Show your friends and family!</span>
+                  </div>
+                ) : (
+                  <p className="text-sm font-medium text-gray-700">
+                    Not published yet
+                  </p>
+                )}
+              </div>
             </div>
           </form>
           {publishMessage && (

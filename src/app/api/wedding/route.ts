@@ -30,6 +30,28 @@ const WeddingUpdateSchema = z.object({
   budget: z.number().optional(),
 });
 
+const WeddingDesignUpdateSchema = z.object({
+  weddingId: z.string(),
+  design: z.object({
+    palette: z.object({
+      bg: z.string(),
+      primary: z.string(),
+      accent: z.string(),
+    }),
+    fonts: z.object({
+      heading: z.string(),
+      body: z.string(),
+    }),
+    hero: z.object({
+      style: z.enum(["photo-overlay", "split", "solid"]),
+    }),
+    accent: z.object({
+      preset: z.enum(["starfield", "none", "florals", "geometric"]),
+    }),
+    layout: z.array(z.enum(["hero", "story", "gallery", "details", "rsvp"])),
+  }),
+});
+
 // Helper function to get user from authorization header
 async function getUserFromAuth(request: NextRequest) {
   const authHeader = request.headers.get('authorization');
@@ -149,6 +171,51 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ data });
   } catch (error) {
     console.error('Error in PUT /api/wedding:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  try {
+    const body = await request.json();
+    console.log('PATCH /api/wedding - Request body:', body);
+
+    // Validate the input data for design update
+    const validatedData = WeddingDesignUpdateSchema.parse(body);
+
+    // Get user ID from middleware header
+    const user = await getUserFromMiddleware(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const supabaseAdmin = getSupabaseClient(true);
+    
+    // Update the wedding's design
+    const { data, error } = await supabaseAdmin
+      .from('weddings')
+      .update({ design: validatedData.design })
+      .eq('id', validatedData.weddingId)
+      .eq('user_id', user.id) // Ensure user owns this wedding
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Supabase error:', error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    if (!data) {
+      return NextResponse.json({ error: 'Wedding not found or access denied' }, { status: 404 });
+    }
+
+    console.log('PATCH /api/wedding - Updated design for wedding:', data.id);
+    return NextResponse.json({ data });
+  } catch (error) {
+    console.error('Error in PATCH /api/wedding:', error);
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ error: 'Invalid request data', details: error.errors }, { status: 400 });
+    }
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 } 
