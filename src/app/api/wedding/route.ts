@@ -15,6 +15,10 @@ const WeddingCreateSchema = z.object({
   contactemail: z.string().optional().default(''),
   phone: z.string().optional().default(''),
   budget: z.number().optional().default(0),
+  tasks: z.array(z.object({
+    title: z.string(),
+    description: z.string().optional(),
+  })).optional(),
 });
 
 const WeddingUpdateSchema = z.object({
@@ -84,26 +88,58 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     console.log('POST /api/wedding - Request body:', body);
 
+    const user = await getUserFromMiddleware(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Separate tasks from the rest of the data
+    const { tasks, ...weddingData } = body;
+
     // Validate the input data
-    const validatedData = WeddingCreateSchema.parse(body);
+    const validatedData = WeddingCreateSchema.omit({ tasks: true }).parse(weddingData);
 
     const supabaseAdmin = getSupabaseClient(true);
 
-    const { data, error } = await supabaseAdmin
+    const { data: wedding, error: weddingError } = await supabaseAdmin
       .from('weddings')
-      .insert([validatedData])
+      .insert([{ ...validatedData, user_id: user.id }])
       .select()
       .single();
 
-    if (error) {
-      console.error('Supabase error:', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+    if (weddingError) {
+      console.error('Supabase wedding insert error:', weddingError);
+      return NextResponse.json({ error: weddingError.message }, { status: 500 });
     }
 
-    console.log('POST /api/wedding - Inserted data:', data);
-    return NextResponse.json({ data });
+    // If there are tasks, insert them
+    if (tasks && tasks.length > 0) {
+      const tasksToInsert = tasks.map((task: any) => ({
+        title: task.title,
+        description: task.description || '',
+        user_id: user.id,
+        status: 'todo',
+      }));
+
+      const { error: tasksError } = await supabaseAdmin
+        .from('tasks')
+        .insert(tasksToInsert);
+
+      if (tasksError) {
+        console.error('Supabase tasks insert error:', tasksError);
+        // Note: In a real app, you might want to handle this more gracefully,
+        // maybe by deleting the created wedding entry (transactional approach)
+        return NextResponse.json({ error: 'Failed to save tasks.' }, { status: 500 });
+      }
+    }
+
+    console.log('POST /api/wedding - Inserted data:', wedding);
+    return NextResponse.json({ data: wedding });
   } catch (error) {
     console.error('Error in POST /api/wedding:', error);
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ error: error.issues }, { status: 400 });
+    }
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

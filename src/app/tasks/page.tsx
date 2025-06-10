@@ -6,21 +6,11 @@ import { TaskList } from '@/components/task-list';
 import { supabase } from '@/lib/supabase';
 import { useChatContext } from '@/components/chat-provider';
 import { Task } from '@/types';
-
-const initialTasks: Task[] = [
-  { id: '1', title: 'Book venue', status: 'todo', description: 'Find and reserve the perfect venue' },
-  { id: '2', title: 'Choose photographer', status: 'todo', description: 'Research and book wedding photographer' },
-  { id: '3', title: 'Send invitations', status: 'done', description: 'Design and send wedding invitations' },
-  { id: '4', title: 'Plan menu', status: 'todo', description: 'Choose catering options and menu items' },
-  { id: '5', title: 'Book DJ', status: 'done', description: 'Hire music entertainment for reception' },
-  { id: '6', title: 'Order flowers', status: 'todo', description: 'Select and order bridal bouquet and centerpieces' },
-  { id: '7', title: 'Book hotel rooms', status: 'todo', description: 'Reserve rooms for out-of-town guests' },
-  { id: '8', title: 'Buy wedding dress', status: 'done', description: 'Find and purchase the perfect dress' },
-];
-
+import { AddTaskForm } from '@/components/add-task-form';
+import { addTask } from './actions';
 
 export default function TasksPage() {
-  const [tasks, setTasks] = useState<Task[]>(initialTasks);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [weddingDetails, setWeddingDetails] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -52,6 +42,30 @@ export default function TasksPage() {
     };
     
     checkSession();
+  }, []);
+
+  useEffect(() => {
+    async function fetchTasks() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.log("No user, not fetching tasks");
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('tasks')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching tasks:', error);
+      } else {
+        setTasks(data || []);
+      }
+    }
+
+    fetchTasks();
   }, []);
 
   useEffect(() => {
@@ -143,20 +157,46 @@ export default function TasksPage() {
   };
 
   const completedTasks = tasks.filter(task => task.status === 'done').length;
-  const completionPercentage = (completedTasks / tasks.length) * 100;
+  const completionPercentage = tasks.length > 0 ? (completedTasks / tasks.length) * 100 : 0;
 
-  const handleTaskToggle = (taskId: string) => {
+  const handleTaskToggle = async (taskId: string) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    const newStatus = task.status === 'todo' ? 'done' : 'todo';
+
     setTasks(prevTasks =>
-      prevTasks.map(task =>
-        task.id === taskId
-          ? { ...task, status: task.status === 'todo' ? 'done' : 'todo' }
-          : task
+      prevTasks.map(t =>
+        t.id === taskId ? { ...t, status: newStatus } : t
       )
     );
+
+    const { error } = await supabase
+      .from('tasks')
+      .update({ status: newStatus })
+      .eq('id', taskId);
+
+    if (error) {
+      console.error('Error updating task:', error);
+      // Revert UI change on error
+      setTasks(prevTasks =>
+        prevTasks.map(t =>
+          t.id === taskId ? { ...t, status: task.status } : t
+        )
+      );
+    }
   };
 
-  const handleDeleteTask = (taskId: string) => {
+  const handleDeleteTask = async (taskId: string) => {
+    const originalTasks = tasks;
     setTasks(prevTasks => prevTasks.filter(task => task.id !== taskId));
+
+    const { error } = await supabase.from('tasks').delete().eq('id', taskId);
+
+    if (error) {
+      console.error('Error deleting task:', error);
+      setTasks(originalTasks);
+    }
   };
 
   const handleAIHelp = (task: Task) => {
@@ -194,32 +234,48 @@ export default function TasksPage() {
               weddingInfo={weddingInfo}
               completionPercentage={completionPercentage}
             />
-            <div className="px-4 py-6 bg-white rounded-xl shadow-sm border border-gray-200">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold text-[#181511]">Wedding Details</h3>
-                {!isEditing && weddingDetails && (
-                  <button
-                    onClick={() => { setIsEditing(true); setUpdateMessage(null); }}
-                    className="px-4 py-1.5 text-sm font-medium bg-[#f9f6f2] text-[#181511] rounded-lg hover:bg-[#f0ebe4] border border-[#f0ebe4] transition-colors"
-                  >
-                    Edit
-                  </button>
-                )}
-              </div>
-
-              {updateMessage && !isEditing && (
-                <div className={`p-3 mb-4 rounded-lg border text-sm ${
-                  updateMessage.type === 'success'
-                    ? 'bg-green-50 border-green-200 text-green-800'
-                    : 'bg-red-50 border-red-200 text-red-800'
-                }`}>
-                  {updateMessage.text}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2 space-y-6">
+                <div className="p-4 bg-white rounded-xl shadow-sm border border-gray-200">
+                  <h3 className="text-lg font-semibold text-[#181511] mb-4">Your Tasks</h3>
+                  <TaskList
+                    tasks={tasks}
+                    onTaskToggle={handleTaskToggle}
+                    onDelete={handleDeleteTask}
+                    onAIHelp={handleAIHelp}
+                  />
                 </div>
-              )}
+              </div>
+              <div className="lg:col-span-1 space-y-6">
+                <AddTaskForm addTask={async (formData: FormData) => {
+                  await addTask(formData);
+                  // Manually re-fetch tasks after adding a new one
+                  const { data: { user } } = await supabase.auth.getUser();
+                  if (!user) return;
+                  const { data, error } = await supabase
+                    .from('tasks')
+                    .select('*')
+                    .eq('user_id', user.id)
+                    .order('created_at', { ascending: false });
 
-              {isEditing ? (
-                <form onSubmit={handleUpdateDetails}>
-                  {updateMessage && (
+                  if (!error && data) {
+                    setTasks(data);
+                  }
+                }} />
+                <div className="p-4 bg-white rounded-xl shadow-sm border border-gray-200">
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-lg font-semibold text-[#181511]">Wedding Details</h3>
+                    {!isEditing && weddingDetails && (
+                      <button
+                        onClick={() => { setIsEditing(true); setUpdateMessage(null); }}
+                        className="px-4 py-1.5 text-sm font-medium bg-[#f9f6f2] text-[#181511] rounded-lg hover:bg-[#f0ebe4] border border-[#f0ebe4] transition-colors"
+                      >
+                        Edit
+                      </button>
+                    )}
+                  </div>
+
+                  {updateMessage && !isEditing && (
                     <div className={`p-3 mb-4 rounded-lg border text-sm ${
                       updateMessage.type === 'success'
                         ? 'bg-green-50 border-green-200 text-green-800'
@@ -228,116 +284,73 @@ export default function TasksPage() {
                       {updateMessage.text}
                     </div>
                   )}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label className="block text-sm font-medium text-[#181511] mb-2">Partner 1 Name</label>
-                        <input type="text" name="partner1name" defaultValue={weddingDetails?.partner1name || ""} placeholder="Enter partner 1 name" className="w-full px-3 py-2 border border-[#e5e1dc] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e89830] focus:border-transparent"/>
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-[#181511] mb-2">Partner 2 Name</label>
-                        <input type="text" name="partner2name" defaultValue={weddingDetails?.partner2name || ""} placeholder="Enter partner 2 name" className="w-full px-3 py-2 border border-[#e5e1dc] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e89830] focus:border-transparent"/>
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-[#181511] mb-2">Wedding Date</label>
-                        <input type="date" name="weddingdate" defaultValue={weddingDetails?.weddingdate ? new Date(weddingDetails.weddingdate).toISOString().split('T')[0] : ""} className="w-full px-3 py-2 border border-[#e5e1dc] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e89830] focus:border-transparent"/>
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-[#181511] mb-2">Venue/City</label>
-                        <input type="text" name="city" defaultValue={weddingDetails?.city || ""} placeholder="Enter venue or city name" className="w-full px-3 py-2 border border-[#e5e1dc] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e89830] focus:border-transparent"/>
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-[#181511] mb-2">Theme</label>
-                        <input type="text" name="theme" defaultValue={weddingDetails?.theme || ""} placeholder="Enter wedding theme" className="w-full px-3 py-2 border border-[#e5e1dc] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e89830] focus:border-transparent"/>
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-[#181511] mb-2">Estimated Guest Count</label>
-                        <input type="number" name="estimatedguestcount" defaultValue={weddingDetails?.estimatedguestcount || ""} placeholder="Enter estimated guest count" className="w-full px-3 py-2 border border-[#e5e1dc] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e89830] focus:border-transparent"/>
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-[#181511] mb-2">Budget</label>
-                        <input type="number" name="budget" defaultValue={weddingDetails?.budget || ""} placeholder="Enter wedding budget" className="w-full px-3 py-2 border border-[#e5e1dc] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e89830] focus:border-transparent"/>
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-[#181511] mb-2">Phone</label>
-                        <input type="tel" name="phone" defaultValue={weddingDetails?.phone || ""} placeholder="Enter phone number" className="w-full px-3 py-2 border border-[#e5e1dc] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e89830] focus:border-transparent"/>
-                    </div>
-                    <div className="md:col-span-2">
-                        <label className="block text-sm font-medium text-[#181511] mb-2">Special Requirements</label>
-                        <input type="text" name="specialrequirements" defaultValue={weddingDetails?.specialrequirements?.join(', ') || ""} placeholder="e.g. wheelchair access, dietary restrictions" className="w-full px-3 py-2 border border-[#e5e1dc] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e89830] focus:border-transparent"/>
-                    </div>
-                  </div>
-                  <div className="flex justify-end gap-3 mt-6">
-                    <button type="button" onClick={() => { setIsEditing(false); setUpdateMessage(null); }} className="px-6 py-2 rounded-lg font-medium transition-colors bg-gray-100 text-[#181511] hover:bg-gray-200">Cancel</button>
-                    <button type="submit" disabled={isUpdating} className={`px-6 py-2 rounded-lg font-medium transition-colors ${isUpdating ? 'bg-gray-400 text-gray-700 cursor-not-allowed' : 'bg-[#e89830] text-[#181511] hover:bg-[#d88a29]'}`}>{isUpdating ? 'Saving...' : 'Save Changes'}</button>
-                  </div>
-                </form>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <p className="text-sm text-gray-600">Partner 1</p>
-                    <p className="font-medium text-[#181511]">{weddingDetails.partner1name || 'Not specified'}</p>
-                  </div>
-                  <div className="space-y-2">
-                    <p className="text-sm text-gray-600">Partner 2</p>
-                    <p className="font-medium text-[#181511]">{weddingDetails.partner2name || 'Not specified'}</p>
-                  </div>
-                  <div className="space-y-2">
-                    <p className="text-sm text-gray-600">Wedding Date</p>
-                    <p className="font-medium text-[#181511]">{weddingDetails.weddingdate ? new Date(weddingDetails.weddingdate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' }) : 'Not specified'}</p>
-                  </div>
-                  <div className="space-y-2">
-                    <p className="text-sm text-gray-600">Venue/City</p>
-                    <p className="font-medium text-[#181511]">{weddingDetails.city || 'Not specified'}</p>
-                  </div>
-                  <div className="space-y-2">
-                    <p className="text-sm text-gray-600">Theme</p>
-                    <p className="font-medium text-[#181511]">{weddingDetails.theme || 'Not specified'}</p>
-                  </div>
-                  <div className="space-y-2">
-                    <p className="text-sm text-gray-600">Guest Count</p>
-                    <p className="font-medium text-[#181511]">{weddingDetails.estimatedguestcount || 'Not specified'} guests</p>
-                  </div>
-                  <div className="space-y-2">
-                    <p className="text-sm text-gray-600">Budget</p>
-                    <p className="font-medium text-[#181511]">
-                      {weddingDetails.budget ? `$${weddingDetails.budget.toLocaleString()}` : 'Not specified'}
-                    </p>
-                  </div>
-                  <div className="space-y-2">
-                    <p className="text-sm text-gray-600">Special Requirements</p>
-                    <p className="font-medium text-[#181511]">
-                      {weddingDetails.specialrequirements?.length
-                        ? weddingDetails.specialrequirements.join(', ')
-                        : 'None specified'}
-                    </p>
-                  </div>
-                  <div className="space-y-2">
-                    <p className="text-sm text-gray-600">Contact Email</p>
-                    <p className="font-medium text-[#181511]">{weddingDetails.contactemail || 'Not specified'}</p>
-                  </div>
-                  <div className="space-y-2">
-                    <p className="text-sm text-gray-600">Phone</p>
-                    <p className="font-medium text-[#181511]">{weddingDetails.phone || 'Not specified'}</p>
-                  </div>
+
+                  {isEditing ? (
+                    <form onSubmit={handleUpdateDetails}>
+                      {updateMessage && (
+                        <div className={`p-3 mb-4 rounded-lg border text-sm ${
+                          updateMessage.type === 'success'
+                            ? 'bg-green-50 border-green-200 text-green-800'
+                            : 'bg-red-50 border-red-200 text-red-800'
+                        }`}>
+                          {updateMessage.text}
+                        </div>
+                      )}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-[#181511] mb-2">Partner 1 Name</label>
+                            <input type="text" name="partner1name" defaultValue={weddingDetails?.partner1name || ""} placeholder="Enter partner 1 name" className="w-full px-3 py-2 border border-[#e5e1dc] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e89830] focus:border-transparent"/>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-[#181511] mb-2">Partner 2 Name</label>
+                            <input type="text" name="partner2name" defaultValue={weddingDetails?.partner2name || ""} placeholder="Enter partner 2 name" className="w-full px-3 py-2 border border-[#e5e1dc] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e89830] focus:border-transparent"/>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-[#181511] mb-2">Wedding Date</label>
+                            <input type="date" name="weddingdate" defaultValue={weddingDetails?.weddingdate ? new Date(weddingDetails.weddingdate).toISOString().split('T')[0] : ""} className="w-full px-3 py-2 border border-[#e5e1dc] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e89830] focus:border-transparent"/>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-[#181511] mb-2">City</label>
+                            <input type="text" name="city" defaultValue={weddingDetails?.city || ""} placeholder="e.g. New York" className="w-full px-3 py-2 border border-[#e5e1dc] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e89830] focus:border-transparent"/>
+                        </div>
+                        <div className="md:col-span-2">
+                            <label className="block text-sm font-medium text-[#181511] mb-2">Wedding Theme</label>
+                            <input type="text" name="theme" defaultValue={weddingDetails?.theme || ""} placeholder="e.g. Rustic, Modern, etc." className="w-full px-3 py-2 border border-[#e5e1dc] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e89830] focus:border-transparent"/>
+                        </div>
+                         <div className="md:col-span-2">
+                            <label className="block text-sm font-medium text-[#181511] mb-2">Special Requirements</label>
+                            <textarea name="specialrequirements" defaultValue={weddingDetails?.specialrequirements?.join(', ') || ""} placeholder="e.g. Vegan options, accessibility needs" rows={3} className="w-full px-3 py-2 border border-[#e5e1dc] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e89830] focus:border-transparent"></textarea>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-end gap-3 mt-6">
+                        <button type="button" onClick={() => { setIsEditing(false); setUpdateMessage(null); }} className="px-4 py-2 text-sm font-medium bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
+                          Cancel
+                        </button>
+                        <button type="submit" disabled={isUpdating} className="px-4 py-2 text-sm font-medium bg-[#e89830] text-white rounded-lg hover:bg-[#d68920] disabled:bg-opacity-50">
+                          {isUpdating ? 'Saving...' : 'Save Changes'}
+                        </button>
+                      </div>
+                    </form>
+                  ) : (
+                    weddingDetails && (
+                      <div className="text-[#181511]">
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <p><strong>Partner 1:</strong> {weddingDetails.partner1name || 'Not set'}</p>
+                          <p><strong>Partner 2:</strong> {weddingDetails.partner2name || 'Not set'}</p>
+                          <p><strong>Date:</strong> {weddingDetails.weddingdate ? new Date(weddingDetails.weddingdate).toLocaleDateString() : 'Not set'}</p>
+                          <p><strong>City:</strong> {weddingDetails.city || 'Not set'}</p>
+                          <p className="col-span-2"><strong>Theme:</strong> {weddingDetails.theme || 'Not set'}</p>
+                          <p className="col-span-2"><strong>Special Requirements:</strong> {weddingDetails.specialrequirements?.join(', ') || 'None'}</p>
+                        </div>
+                      </div>
+                    )
+                  )}
                 </div>
-              )}
+              </div>
             </div>
           </>
         )}
-        <div>
-          <h2 className="text-[#181511] text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 pb-3 pt-5">
-            Tasks ({completedTasks}/{tasks.length} completed)
-          </h2>
-          <TaskList
-            tasks={tasks}
-            onTaskToggle={handleTaskToggle}
-            onDelete={handleDeleteTask}
-            onAIHelp={handleAIHelp}
-          />
-        </div>
       </div>
-      
-
     </div>
   );
 } 

@@ -1,24 +1,14 @@
+"use client";
+
 import { useState, useRef, useEffect, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChatMessage, WeddingDetails } from '@/types/wedding';
-import { extractWeddingDetails } from '@/lib/extractWeddingDetails';
+import { supabase } from '@/lib/supabase';
 
 const STARTER_MESSAGE: ChatMessage = {
   role: 'assistant',
   content: "Hi there! Congratulations on your upcoming wedding 🎉. To get started, could you tell me the date of your wedding?",
 };
-
-const requiredFields = [
-  'partner1name',
-  'partner2name',
-  'weddingdate',
-  'city',
-  'theme',
-  'estimatedguestcount',
-  'contactemail',
-  'phone',
-  'budget'
-];
 
 export function WeddingChat() {
   const [messages, setMessages] = useState<ChatMessage[]>([STARTER_MESSAGE]);
@@ -29,21 +19,13 @@ export function WeddingChat() {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [hasSaved, setHasSaved] = useState(false);
-  const [missingFields, setMissingFields] = useState<string[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
   useEffect(() => {
     if (saveSuccess) {
-      console.log('saveSuccess is true, setting up redirect timer...');
-      const timeout = setTimeout(() => {
-        console.log('Redirecting to /setup-password...');
-        router.push('/setup-password');
-      }, 2000);
-      return () => clearTimeout(timeout);
-    } else {
-      console.log('saveSuccess is false, no redirect');
+      router.push('/setup-password');
     }
   }, [saveSuccess, router]);
 
@@ -85,35 +67,38 @@ export function WeddingChat() {
       console.log('API response data:', data);
       if (data.functionCall && data.details) {
         // Model has called the function with structured details
+        console.log('Chat finished. Details collected:', data.details);
         setMessages(prev => [...prev, { role: 'assistant', content: 'Thank you! All your details have been collected.' }]);
         setIsComplete(true);
-        setMissingFields([]);
         setIsLoading(false);
         if (!hasSaved) {
           setIsSaving(true);
           setSaveError(null);
           try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const headers: HeadersInit = { 'Content-Type': 'application/json' };
+            if (session) {
+              headers['Authorization'] = `Bearer ${session.access_token}`;
+            }
+
             const saveRes = await fetch('/api/wedding', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers,
               body: JSON.stringify(data.details),
             });
             
             if (saveRes.ok) {
               setSaveSuccess(true);
               setHasSaved(true);
-              const responseData = await saveRes.json();
-              // Store both wedding details and the ID for later linking
-              localStorage.setItem('weddingDetails', JSON.stringify({
-                ...data.details,
-                id: responseData.data.id
-              }));
+              // This flow should not happen for a logged-in user.
+              // The redirect is handled by the middleware and page component.
             } else {
               // Handle authentication error gracefully
               if (saveRes.status === 401) {
-                setSaveError('Please log in to save your wedding details. Your information is preserved for when you sign up!');
+                setSaveError('Your details have been saved locally. Please create an account to finalize your setup!');
                 // Store details locally for later use
                 localStorage.setItem('pendingWeddingDetails', JSON.stringify(data.details));
+                setSaveSuccess(true);
               } else {
                 const err = await saveRes.text();
                 setSaveError(err || 'Failed to save details.');
@@ -130,52 +115,6 @@ export function WeddingChat() {
       // Otherwise, show the assistant's reply as before
       const assistantMessage: ChatMessage = { role: 'assistant', content: data.reply };
       setMessages(prev => [...prev, assistantMessage]);
-      // Extraction for debug only
-      const details = extractWeddingDetails([...messages, userMessage, assistantMessage]);
-      console.log('Extracted details:', details);
-      const missingFields = requiredFields.filter(field => !(field in details));
-      console.log('Missing fields:', missingFields);
-      console.log('Required fields:', requiredFields);
-      setMissingFields(missingFields);
-      const isAllFieldsComplete = missingFields.length === 0;
-      console.log('Is all fields complete:', isAllFieldsComplete);
-      setIsComplete(isAllFieldsComplete);
-      if (isAllFieldsComplete && !hasSaved) {
-        console.log('All fields complete, attempting to save...');
-        setIsSaving(true);
-        setSaveError(null);
-        try {
-          const saveRes = await fetch('/api/wedding', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(details),
-          });
-          if (saveRes.ok) {
-            console.log('Save successful, setting saveSuccess to true');
-            setSaveSuccess(true);
-            setHasSaved(true);
-            const responseData = await saveRes.json();
-            // Store both wedding details and the ID for later linking
-            localStorage.setItem('weddingDetails', JSON.stringify({
-              ...details,
-              id: responseData.data.id
-            }));
-          } else {
-            const err = await saveRes.text();
-            console.error('Save failed:', err);
-            setSaveError(err || 'Failed to save details.');
-          }
-        } catch (err: any) {
-          console.error('Save error:', err);
-          setSaveError('Failed to save details.');
-        } finally {
-          setIsSaving(false);
-        }
-      } else if (!isAllFieldsComplete) {
-        console.log('Not all fields complete, missing:', missingFields);
-      } else if (hasSaved) {
-        console.log('Already saved, not saving again');
-      }
     } catch (err) {
       console.error('Chat error:', err);
       setMessages(prev => [...prev, { role: 'assistant', content: 'Sorry, there was an error. Please try again.' }]);

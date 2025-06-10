@@ -9,7 +9,13 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-const SYSTEM_PROMPT = `You are a friendly and professional wedding planning assistant. Your goal is to gather all the required wedding details from the user. When you have all the information, call the submit_wedding_details function with the collected data. Do not summarize or end the conversation until you have called the function.`;
+const SYSTEM_PROMPT = `You are a friendly and professional wedding planning assistant. 
+Your goal is to gather all the required wedding details from the user, only asking one question at a time. 
+Ask clarifying questions to understand the user's needs better. For example, if a user mentions a specific cultural wedding like "Indian wedding", you should ask follow-up questions about common elements like "religious components" to generate more relevant tasks.
+Once you have all the necessary information, generate a list of initial tasks based on the conversation.
+Finally, call the submit_wedding_details function with all the collected data, including the list of tasks.
+Important: Do not mention the tasks you are creating in your conversational replies. The task generation should be a silent process for the user.
+Do not summarize or end the conversation until you have called the function.`;
 
 const schema = {
   type: 'object',
@@ -23,11 +29,23 @@ const schema = {
     specialrequirements: { type: 'array', items: { type: 'string' }, description: 'Special requirements or needs' },
     contactemail: { type: 'string', description: 'Contact email address' },
     phone: { type: 'string', description: 'Phone number' },
-    budget: { type: 'number', description: 'Wedding budget' }
+    budget: { type: 'number', description: 'Wedding budget' },
+    tasks: {
+      type: 'array',
+      description: 'A list of generated initial tasks for the user.',
+      items: {
+        type: 'object',
+        properties: {
+          title: { type: 'string' },
+          description: { type: 'string', description: 'Optional description for the task' }
+        },
+        required: ['title']
+      }
+    }
   },
   required: [
     'partner1name', 'partner2name', 'weddingdate', 'city', 'theme',
-    'estimatedguestcount', 'contactemail', 'phone', 'budget'
+    'estimatedguestcount', 'contactemail', 'phone', 'budget', 'tasks'
   ]
 };
 

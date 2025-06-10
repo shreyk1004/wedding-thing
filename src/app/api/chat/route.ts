@@ -8,12 +8,23 @@ export async function POST(req: Request) {
   
   try {
     const result = await getChatCompletion(messages as ChatMessage[]);
-    if (result.functionCall) {
-      return new Response(JSON.stringify({ details: result.details, functionCall: true }), {
+    
+    // The result can either be a conversational reply or a function call with details.
+    if (result.functionCall && result.details) {
+      // If it's a function call, send back the structured details.
+      // The `details` object now contains everything, including tasks.
+      return new Response(JSON.stringify({ 
+        details: result.details, 
+        functionCall: true 
+      }), {
         headers: { 'Content-Type': 'application/json' }
       });
     } else {
-      return new Response(JSON.stringify({ reply: result.content, functionCall: false }), {
+      // If it's a regular message, send back the content for the chat.
+      return new Response(JSON.stringify({ 
+        reply: result.content, 
+        functionCall: false 
+      }), {
         headers: { 'Content-Type': 'application/json' }
       });
     }
