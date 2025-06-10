@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { CheckSquare, Globe, Settings, MessageSquare, LogOut, X } from 'lucide-react';
+import { CheckSquare, Globe, Settings, MessageSquare, LogOut, X, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getSupabaseClient } from '@/lib/supabase';
 import { useAuth } from './auth-provider';
@@ -114,9 +114,26 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         <div className="flex h-full flex-col justify-between p-4">
           <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between mb-4">
-              <h1 className="text-[#181511] text-base font-medium leading-normal">
-                Wedly
-              </h1>
+              {user ? (
+                // Logged in: Show Wedly + Email + User Icon in one line
+                <div className="flex items-center w-full">
+                  <h1 className="text-[#181511] text-base font-medium leading-normal flex-shrink-0">
+                    Wedly
+                  </h1>
+                  <div className="w-[30%] flex-shrink-0"></div>
+                  <div className="flex items-center flex-1 min-w-0 px-2 py-1 rounded-lg hover:bg-[#f9f8f6] transition-colors">
+                    <p className="text-sm text-[#887863] truncate flex-1 min-w-0 mr-2">
+                      {user.email}
+                    </p>
+                    <User className="h-5 w-5 text-[#887863] flex-shrink-0" />
+                  </div>
+                </div>
+              ) : (
+                // Not logged in: Just show Wedly
+                <h1 className="text-[#181511] text-base font-medium leading-normal">
+                  Wedly
+                </h1>
+              )}
               <button
                 type="button"
                 className="p-1 text-[#887863] hover:text-[#181511] lg:hidden"
@@ -126,6 +143,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 <X className="h-6 w-6" aria-hidden="true" />
               </button>
             </div>
+            
             <div className="flex flex-col gap-2">
               {navItems.map((item) => {
                 const Icon = item.icon;
