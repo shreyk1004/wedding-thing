@@ -37,6 +37,27 @@ export function WebsiteTab() {
   const [isPublishing, setIsPublishing] = useState(false);
   const [publishSubdomain, setPublishSubdomain] = useState('');
   const [publishMessage, setPublishMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [publishMessageOpacity, setPublishMessageOpacity] = useState(1);
+
+  // Auto-fade publish message
+  useEffect(() => {
+    if (publishMessage) {
+      setPublishMessageOpacity(1); // Ensure it starts visible
+      const timer = setTimeout(() => {
+        // Use requestAnimationFrame to ensure the opacity change happens in the next frame
+        requestAnimationFrame(() => {
+          setPublishMessageOpacity(0); // Start fade out
+          // Remove the message after fade completes
+          setTimeout(() => {
+            setPublishMessage(null);
+            setPublishMessageOpacity(1); // Reset for next message
+          }, 500); // Wait for transition duration
+        });
+      }, 5000); // Start fade after 5 seconds
+      
+      return () => clearTimeout(timer);
+    }
+  }, [publishMessage]);
 
   // Domain-related state
   const [baseDomain, setBaseDomain] = useState<string>('your-domain.com');
@@ -729,8 +750,20 @@ export function WebsiteTab() {
             </div>
           </form>
           {publishMessage && (
-            <div className={`mt-4 p-4 rounded-lg ${publishMessage.type === 'success' ? 'bg-green-100 border border-green-400' : 'bg-red-100 border border-red-400'}`}>
-              {publishMessage.text}
+            <div 
+              className={`mt-4 p-4 rounded-lg transition-opacity duration-500 ${publishMessage.type === 'success' ? 'bg-green-100 border border-green-400' : 'bg-red-100 border border-red-400'}`}
+              style={{ opacity: publishMessageOpacity }}
+            >
+              <div className="flex items-start justify-between">
+                <span className="flex-1">{publishMessage.text}</span>
+                <button
+                  onClick={() => setPublishMessage(null)}
+                  className="ml-2 text-gray-400 hover:text-gray-600 transition-colors"
+                  aria-label="Close message"
+                >
+                  ✕
+                </button>
+              </div>
             </div>
           )}
         </div>

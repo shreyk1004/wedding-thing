@@ -12,13 +12,11 @@ interface WeddingData {
   photos: string[];
   theme: string;
   design?: any;
-  regenerateKey?: number;
 }
 
 function WebsitePreviewContent() {
   const [weddingData, setWeddingData] = useState<WeddingData | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [isRegenerating, setIsRegenerating] = useState(false);
 
   useEffect(() => {
     fetchUserWeddingData();
@@ -59,25 +57,6 @@ function WebsitePreviewContent() {
     }
   };
 
-  const handleRegenerateDesign = async () => {
-    if (!weddingData) return;
-    
-    console.log('🎨 Triggering design regeneration...');
-    setIsRegenerating(true);
-    
-    // Force a re-render by updating the wedding data timestamp
-    // This will trigger WebsiteBuilder to regenerate the design
-    setWeddingData({
-      ...weddingData,
-      regenerateKey: Date.now() // Add a key to force regeneration
-    });
-    
-    // Reset the regenerating state after a short delay
-    setTimeout(() => {
-      setIsRegenerating(false);
-    }, 1000);
-  };
-
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
@@ -107,8 +86,6 @@ function WebsitePreviewContent() {
   return (
     <WebsiteBuilder 
       weddingData={weddingData}
-      isGenerating={isRegenerating}
-      onRegenerateDesign={handleRegenerateDesign}
     />
   );
 }

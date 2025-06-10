@@ -44,12 +44,10 @@ interface DesignRecipe {
 
 interface WebsiteBuilderProps {
   weddingData: WeddingData;
-  isGenerating?: boolean;
-  onRegenerateDesign?: () => void;
   mode?: 'preview' | 'fullsite';
 }
 
-export function WebsiteBuilder({ weddingData, isGenerating = false, onRegenerateDesign, mode = 'preview' }: WebsiteBuilderProps) {
+export function WebsiteBuilder({ weddingData, mode = 'preview' }: WebsiteBuilderProps) {
   // Initialize with wedding design if it exists and is valid
   const getInitialDesign = (): DesignRecipe | null => {
     if (weddingData.design && 
@@ -71,9 +69,30 @@ export function WebsiteBuilder({ weddingData, isGenerating = false, onRegenerate
   const [previewDesign, setPreviewDesign] = useState<DesignRecipe | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [saveMessageOpacity, setSaveMessageOpacity] = useState(1);
   
   // Check if there's an unsaved preview design
   const hasUnsavedPreview = previewDesign !== null;
+
+  // Auto-fade save message
+  useEffect(() => {
+    if (saveMessage) {
+      setSaveMessageOpacity(1); // Ensure it starts visible
+      const timer = setTimeout(() => {
+        // Use requestAnimationFrame to ensure the opacity change happens in the next frame
+        requestAnimationFrame(() => {
+          setSaveMessageOpacity(0); // Start fade out
+          // Remove the message after fade completes
+          setTimeout(() => {
+            setSaveMessage(null);
+            setSaveMessageOpacity(1); // Reset for next message
+          }, 500); // Wait for transition duration
+        });
+      }, 3000); // Start fade after 3 seconds
+      
+      return () => clearTimeout(timer);
+    }
+  }, [saveMessage]);
 
   const createFallbackDesign = (): DesignRecipe => {
     return {
@@ -95,18 +114,10 @@ export function WebsiteBuilder({ weddingData, isGenerating = false, onRegenerate
 
   // Generate design recipe if none exists
   useEffect(() => {
-    if (!designRecipe && !isGenerating && !isLoading) {
+    if (!designRecipe && !isLoading) {
       generateDesignRecipe();
     }
-  }, [weddingData.id, designRecipe, isGenerating, isLoading]);
-
-  // Trigger regeneration when regenerateKey changes
-  useEffect(() => {
-    if (weddingData.regenerateKey && !isGenerating && !isLoading) {
-      console.log('🔄 Regenerating design due to regenerateKey change');
-      generateDesignRecipe();
-    }
-  }, [weddingData.regenerateKey]);
+  }, [weddingData.id, designRecipe, isLoading]);
 
   // When page loads with saved design, create a preview copy so save button appears
   useEffect(() => {
@@ -226,7 +237,7 @@ export function WebsiteBuilder({ weddingData, isGenerating = false, onRegenerate
   };
 
   // Show loading state
-  if (isLoading || isGenerating) {
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
@@ -484,15 +495,14 @@ export function WebsiteBuilder({ weddingData, isGenerating = false, onRegenerate
         >
           <div className="flex flex-col gap-3">
             {/* Regenerate Button */}
-            {onRegenerateDesign && (
-              <button
-                onClick={onRegenerateDesign}
-                className="w-12 h-12 bg-blue-500 text-white rounded-full shadow-lg hover:bg-blue-600 transition-all duration-300 hover:scale-110 flex items-center justify-center text-lg"
-                title="Refresh design"
-              >
-                🔄
-              </button>
-            )}
+            <button
+              onClick={generateDesignRecipe}
+              disabled={isLoading}
+              className="w-12 h-12 bg-blue-500 text-white rounded-full shadow-lg hover:bg-blue-600 transition-all duration-300 hover:scale-110 flex items-center justify-center text-lg disabled:bg-gray-400"
+              title="Refresh design"
+            >
+              {isLoading ? '⏳' : '🔄'}
+            </button>
 
             {/* Save Button - only show when there's a preview */}
             {hasUnsavedPreview && (
@@ -506,19 +516,38 @@ export function WebsiteBuilder({ weddingData, isGenerating = false, onRegenerate
               </button>
             )}
           </div>
+        </div>
+      )}
 
-          {/* Save Message */}
-          {saveMessage && (
-            <div 
-              className={`mt-3 px-4 py-2 rounded-lg text-sm font-medium ${
-                saveMessage.type === 'success' 
-                  ? 'bg-green-100 text-green-800 border border-green-200' 
-                  : 'bg-red-100 text-red-800 border border-red-200'
-              }`}
-            >
-              {saveMessage.text}
+      {/* Save Message - Completely separate container */}
+      {mode === 'preview' && saveMessage && (
+        <div 
+          className="fixed z-50"
+          style={{ 
+            top: '140px', 
+            right: '24px',
+            position: 'fixed'
+          }}
+        >
+          <div 
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-opacity duration-500 shadow-lg max-w-xs ${
+              saveMessage.type === 'success' 
+                ? 'bg-green-100 text-green-800 border border-green-200' 
+                : 'bg-red-100 text-red-800 border border-red-200'
+            }`}
+            style={{ opacity: saveMessageOpacity }}
+          >
+            <div className="flex items-start justify-between">
+              <span className="flex-1">{saveMessage.text}</span>
+              <button
+                onClick={() => setSaveMessage(null)}
+                className="ml-2 text-gray-400 hover:text-gray-600 transition-colors"
+                aria-label="Close message"
+              >
+                ✕
+              </button>
             </div>
-          )}
+          </div>
         </div>
       )}
     </div>

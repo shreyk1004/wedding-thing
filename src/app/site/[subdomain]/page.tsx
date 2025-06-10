@@ -31,7 +31,6 @@ export default async function SitePage({ params }: SitePageProps) {
     <div className="min-h-screen">
       <WebsiteBuilder 
         weddingData={weddingData} 
-        isGenerating={false}
         mode="fullsite"
       />
     </div>

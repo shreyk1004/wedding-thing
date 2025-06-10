@@ -30,6 +30,7 @@ const openai = new OpenAI({
 
 const DesignRecipeRequestSchema = z.object({
   weddingId: z.string().uuid(),
+  saveToDatabase: z.boolean().optional().default(true), // Default to true for backward compatibility
 });
 
 // Design Recipe Schema - matches your specification
@@ -72,8 +73,9 @@ export async function POST(request: NextRequest) {
     console.log('- Key starts with:', process.env.OPENAI_API_KEY?.substring(0, 20) + '...');
     
     const body = await request.json();
-    const { weddingId } = DesignRecipeRequestSchema.parse(body);
+    const { weddingId, saveToDatabase } = DesignRecipeRequestSchema.parse(body);
     console.log('Wedding ID:', weddingId);
+    console.log('Save to database:', saveToDatabase);
 
     // Fetch wedding data from Supabase with user ownership check
     const { data: wedding, error } = await supabase
@@ -216,16 +218,22 @@ Return ONLY valid JSON in this exact format:
     // Apply guard-rails and validate design
     const validatedRecipe = applyGuardRails(designRecipe, wedding);
 
-    // Save the design recipe to the wedding record
-    const { error: updateError } = await supabase
-      .from('weddings')
-      .update({ design: validatedRecipe })
-      .eq('id', weddingId)
-      .eq('user_id', user.id); // Ensure user owns this wedding
+    // Only save to database if explicitly requested
+    if (saveToDatabase) {
+      console.log('💾 Saving design recipe to database...');
+      const { error: updateError } = await supabase
+        .from('weddings')
+        .update({ design: validatedRecipe })
+        .eq('id', weddingId)
+        .eq('user_id', user.id); // Ensure user owns this wedding
 
-    if (updateError) {
-      console.error('Failed to save design recipe:', updateError);
-      return NextResponse.json({ error: 'Failed to save design recipe' }, { status: 500 });
+      if (updateError) {
+        console.error('Failed to save design recipe:', updateError);
+        return NextResponse.json({ error: 'Failed to save design recipe' }, { status: 500 });
+      }
+      console.log('✅ Design recipe saved to database');
+    } else {
+      console.log('🎨 Design recipe generated as preview only (not saved)');
     }
 
     return NextResponse.json({ 
