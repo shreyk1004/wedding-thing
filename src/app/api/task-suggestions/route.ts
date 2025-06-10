@@ -163,7 +163,7 @@ REQUIREMENTS:
       userPrompt = `Based on the wedding details and current trends, suggest a specific wedding planning task that hasn't been covered yet. Make it practical and actionable.`;
 
     } else { // description_only
-      systemPrompt = `You are a helpful wedding planning assistant. Generate a detailed description for the given wedding task title.
+      systemPrompt = `You are a helpful wedding planning assistant. Generate a concise, actionable description for the given wedding task title.
 
 ${weddingContext}
 
@@ -173,14 +173,15 @@ ${trendsResult.content}
 TASK TITLE TO DESCRIBE: "${title}"
 
 REQUIREMENTS:
-1. Create a detailed, actionable description for this specific task
-2. Tailor it to the wedding details (location, theme, guest count, budget)
-3. Include current trends and practical considerations
-4. Make it specific and helpful for planning
-5. Response format must be ONLY valid JSON with no additional text: {"description": "Detailed description"}
-6. Ensure all quotes inside the JSON values are properly escaped`;
+1. Create a brief, actionable description (2-3 sentences max)
+2. Focus on the key steps and what to research/consider
+3. Don't repeat wedding details (date, names, location, etc.) - just focus on the task
+4. Include 1-2 practical tips or current trends if relevant
+5. Keep it concise - detailed help will be available later via AI Help
+6. Response format must be ONLY valid JSON with no additional text: {"description": "Brief actionable description"}
+7. Ensure all quotes inside the JSON values are properly escaped`;
 
-      userPrompt = `Create a detailed, actionable description for the task "${title}" that is tailored to this specific wedding.`;
+      userPrompt = `Create a brief, actionable description for the task "${title}". Focus on key steps and what to research, not wedding details.`;
     }
 
     // Get AI suggestion
