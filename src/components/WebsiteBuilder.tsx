@@ -44,12 +44,10 @@ interface DesignRecipe {
 
 interface WebsiteBuilderProps {
   weddingData: WeddingData;
-  isGenerating?: boolean;
-  onRegenerateDesign?: () => void;
   mode?: 'preview' | 'fullsite';
 }
 
-export function WebsiteBuilder({ weddingData, isGenerating = false, onRegenerateDesign, mode = 'preview' }: WebsiteBuilderProps) {
+export function WebsiteBuilder({ weddingData, mode = 'preview' }: WebsiteBuilderProps) {
   // Initialize with wedding design if it exists and is valid
   const getInitialDesign = (): DesignRecipe | null => {
     if (weddingData.design && 
@@ -116,18 +114,10 @@ export function WebsiteBuilder({ weddingData, isGenerating = false, onRegenerate
 
   // Generate design recipe if none exists
   useEffect(() => {
-    if (!designRecipe && !isGenerating && !isLoading) {
+    if (!designRecipe && !isLoading) {
       generateDesignRecipe();
     }
-  }, [weddingData.id, designRecipe, isGenerating, isLoading]);
-
-  // Trigger regeneration when regenerateKey changes
-  useEffect(() => {
-    if (weddingData.regenerateKey && !isGenerating && !isLoading) {
-      console.log('🔄 Regenerating design due to regenerateKey change');
-      generateDesignRecipe();
-    }
-  }, [weddingData.regenerateKey]);
+  }, [weddingData.id, designRecipe, isLoading]);
 
   // When page loads with saved design, create a preview copy so save button appears
   useEffect(() => {
@@ -247,7 +237,7 @@ export function WebsiteBuilder({ weddingData, isGenerating = false, onRegenerate
   };
 
   // Show loading state
-  if (isLoading || isGenerating) {
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
@@ -505,15 +495,14 @@ export function WebsiteBuilder({ weddingData, isGenerating = false, onRegenerate
         >
           <div className="flex flex-col gap-3">
             {/* Regenerate Button */}
-            {onRegenerateDesign && (
-              <button
-                onClick={onRegenerateDesign}
-                className="w-12 h-12 bg-blue-500 text-white rounded-full shadow-lg hover:bg-blue-600 transition-all duration-300 hover:scale-110 flex items-center justify-center text-lg"
-                title="Refresh design"
-              >
-                🔄
-              </button>
-            )}
+            <button
+              onClick={generateDesignRecipe}
+              disabled={isLoading}
+              className="w-12 h-12 bg-blue-500 text-white rounded-full shadow-lg hover:bg-blue-600 transition-all duration-300 hover:scale-110 flex items-center justify-center text-lg disabled:bg-gray-400"
+              title="Refresh design"
+            >
+              {isLoading ? '⏳' : '🔄'}
+            </button>
 
             {/* Save Button - only show when there's a preview */}
             {hasUnsavedPreview && (
