@@ -10,6 +10,8 @@ interface ChatMessage {
   content: string;
   timestamp: Date;
   toolsUsed?: string[];
+  searchQuery?: string;
+  citations?: string[];
 }
 
 interface ChatSession {
@@ -209,7 +211,9 @@ export function AIChatSidebar({ isOpen, onClose, initialTask }: AIChatSidebarPro
         type: 'assistant',
         content: data.advice || data.content || 'Sorry, I couldn\'t generate a response.',
         timestamp: new Date(),
-        toolsUsed: data.toolsUsed || []
+        toolsUsed: data.toolsUsed || [],
+        searchQuery: data.searchQuery,
+        citations: data.citations
       };
 
       setChatSessions(prev => prev.map(session => 
@@ -436,6 +440,25 @@ export function AIChatSidebar({ isOpen, onClose, initialTask }: AIChatSidebarPro
                           }}
                         >
                           🔧 Tools used: {message.toolsUsed.join(', ')}
+                        </div>
+                      )}
+                      {message.citations && message.citations.length > 0 && message.type === 'assistant' && (
+                        <div className="mt-3 pt-2 border-t border-gray-200">
+                          <div className="text-xs font-medium text-gray-600 mb-1">Sources:</div>
+                          <div className="space-y-1">
+                            {message.citations.slice(0, 3).map((citation, index) => (
+                              <div key={index} className="text-xs">
+                                <a 
+                                  href={citation} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="text-blue-600 hover:text-blue-800 underline break-all"
+                                >
+                                  {index + 1}. {citation.length > 50 ? citation.substring(0, 50) + '...' : citation}
+                                </a>
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       )}
                       <div 
