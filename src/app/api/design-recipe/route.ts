@@ -112,9 +112,28 @@ Based on the theme "${wedding.theme}", create a design recipe that includes:
    - primary: Main text color (usually dark for readability) 
    - accent: Highlight color that matches the theme
 
-2. FONTS: Choose fonts that match the theme and mood
-   - heading: For couple names and section titles (elegant/decorative fonts)
-   - body: For body text and details (readable fonts)
+2. FONTS: Choose fonts that match the theme and mood from these specific options:
+   
+   HEADING FONTS (Serif/Script - elegant, formal, great for names & titles):
+   - "Playfair Display" - classic, romantic serif
+   - "Cormorant Garamond" - sophisticated and timeless
+   - "Libre Baskerville" - modern take on old-style serif
+   - "Merriweather" - readable but formal
+   - "Great Vibes" - elegant cursive, perfect for names
+   - "Dancing Script" - more casual script, still wedding-friendly
+   - "Parisienne" - soft, graceful handwritten feel
+   - "Cinzel" - bold and regal (use sparingly)
+   - "Satisfy" - smooth brush-script, great for stylistic touches
+
+   BODY FONTS (Sans-Serif - clean, modern, good for readability):
+   - "Inter" - versatile, ultra-clean
+   - "Lato" - modern and neutral
+   - "Josefin Sans" - light, airy, great with serif headers
+   - "Poppins" - geometric but soft
+   - "Raleway" - sleek, upscale look
+   - "Quicksand" - round, friendly modern vibe
+
+   Choose ONE heading font and ONE body font that complement each other and match the theme.
 
 3. HERO STYLE: Choose based on available photos and theme
    - "photo-overlay": If photos available and want dramatic look (PREFERRED when photos exist)
@@ -227,7 +246,7 @@ function createFallbackDesign(theme: string, photoCount: number): DesignRecipe {
   if (themeKey.includes('modern') || themeKey.includes('minimalist')) {
     return {
       palette: { bg: "#ffffff", primary: "#2d3748", accent: "#4299e1" },
-      fonts: { heading: "Inter", body: "Inter" },
+      fonts: { heading: "Cinzel", body: "Inter" },
       hero: { style: photoCount > 0 ? "photo-overlay" : "solid" },
       accent: { preset: "geometric" },
       layout: ["hero", "story", "details", "gallery", "rsvp"]
@@ -235,7 +254,7 @@ function createFallbackDesign(theme: string, photoCount: number): DesignRecipe {
   } else if (themeKey.includes('romantic') || themeKey.includes('garden') || themeKey.includes('floral')) {
     return {
       palette: { bg: "#faf5f5", primary: "#2d3748", accent: "#e53e3e" },
-      fonts: { heading: "Playfair Display", body: "Source Sans Pro" },
+      fonts: { heading: "Great Vibes", body: "Josefin Sans" },
       hero: { style: photoCount > 0 ? "photo-overlay" : "solid" },
       accent: { preset: "florals" },
       layout: ["hero", "story", "gallery", "details", "rsvp"]
@@ -243,9 +262,17 @@ function createFallbackDesign(theme: string, photoCount: number): DesignRecipe {
   } else if (themeKey.includes('elegant') || themeKey.includes('classic')) {
     return {
       palette: { bg: "#f7fafc", primary: "#1a202c", accent: "#d69e2e" },
-      fonts: { heading: "Playfair Display", body: "Inter" },
+      fonts: { heading: "Playfair Display", body: "Lato" },
       hero: { style: photoCount > 0 ? "photo-overlay" : "solid" },
       accent: { preset: "starfield" },
+      layout: ["hero", "story", "gallery", "details", "rsvp"]
+    };
+  } else if (themeKey.includes('casual') || themeKey.includes('fun') || themeKey.includes('beach')) {
+    return {
+      palette: { bg: "#ffffff", primary: "#2d3748", accent: "#38b2ac" },
+      fonts: { heading: "Dancing Script", body: "Quicksand" },
+      hero: { style: photoCount > 0 ? "photo-overlay" : "solid" },
+      accent: { preset: "none" },
       layout: ["hero", "story", "gallery", "details", "rsvp"]
     };
   }
@@ -253,7 +280,7 @@ function createFallbackDesign(theme: string, photoCount: number): DesignRecipe {
   // Default safe fallback - always prefer photo-overlay when photos exist
   return {
     palette: { bg: "#ffffff", primary: "#2d3748", accent: "#e89830" },
-    fonts: { heading: "Playfair Display", body: "Inter" },
+    fonts: { heading: "Cormorant Garamond", body: "Inter" },
     hero: { style: photoCount > 0 ? "photo-overlay" : "solid" },
     accent: { preset: "none" },
     layout: ["hero", "story", "gallery", "details", "rsvp"]

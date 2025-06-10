@@ -163,9 +163,6 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                     Sign Out
                   </p>
                 </button>
-                <button className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-10 px-4 bg-[#e89830] text-[#181511] text-sm font-bold leading-normal tracking-[0.015em] hover:bg-[#d88a29] transition-colors">
-                  <span className="truncate">Preview Website</span>
-                </button>
               </>
             )}
           </div>

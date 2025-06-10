@@ -20,6 +20,7 @@ interface WeddingData {
   photos: string[];
   theme: string;
   design?: DesignRecipe;
+  regenerateKey?: number;
 }
 
 interface DesignRecipe {
@@ -65,7 +66,14 @@ export function WebsiteBuilder({ weddingData, isGenerating = false, onRegenerate
   const [designRecipe, setDesignRecipe] = useState<DesignRecipe | null>(getInitialDesign());
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isDebugOpen, setIsDebugOpen] = useState(true);
+  
+  // Save Design System
+  const [previewDesign, setPreviewDesign] = useState<DesignRecipe | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  
+  // Check if there's an unsaved preview design
+  const hasUnsavedPreview = previewDesign !== null;
 
   const createFallbackDesign = (): DesignRecipe => {
     return {
@@ -92,6 +100,36 @@ export function WebsiteBuilder({ weddingData, isGenerating = false, onRegenerate
     }
   }, [weddingData.id, designRecipe, isGenerating, isLoading]);
 
+  // Trigger regeneration when regenerateKey changes
+  useEffect(() => {
+    if (weddingData.regenerateKey && !isGenerating && !isLoading) {
+      console.log('🔄 Regenerating design due to regenerateKey change');
+      generateDesignRecipe();
+    }
+  }, [weddingData.regenerateKey]);
+
+  // When page loads with saved design, create a preview copy so save button appears
+  useEffect(() => {
+    if (designRecipe && !previewDesign && mode === 'preview') {
+      console.log('📋 Creating preview copy of saved design');
+      setPreviewDesign({ ...designRecipe });
+    }
+  }, [designRecipe, previewDesign, mode]);
+
+  // Add navigation warning for unsaved preview designs
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedPreview && mode === 'preview') {
+        e.preventDefault();
+        e.returnValue = 'You have an unsaved design preview. It will be discarded if you leave. Save your design first?';
+        return 'You have an unsaved design preview. It will be discarded if you leave. Save your design first?';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedPreview, mode]);
+
   // Load Google Fonts dynamically
   useEffect(() => {
     if (designRecipe?.fonts?.heading && designRecipe?.fonts?.body) {
@@ -109,6 +147,7 @@ export function WebsiteBuilder({ weddingData, isGenerating = false, onRegenerate
   const generateDesignRecipe = async () => {
     setIsLoading(true);
     setError(null);
+    setSaveMessage(null); // Clear any previous save messages
     
     try {
       const response = await fetch('/api/design-recipe', {
@@ -117,7 +156,8 @@ export function WebsiteBuilder({ weddingData, isGenerating = false, onRegenerate
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          weddingId: weddingData.id
+          weddingId: weddingData.id,
+          saveToDatabase: false // Never save automatically - always store as preview
         }),
       });
 
@@ -127,7 +167,9 @@ export function WebsiteBuilder({ weddingData, isGenerating = false, onRegenerate
 
       const data = await response.json();
       if (data.designRecipe && typeof data.designRecipe === 'object' && data.designRecipe.palette) {
-        setDesignRecipe(data.designRecipe);
+        // Store as preview design (not saved)
+        setPreviewDesign(data.designRecipe);
+        console.log('🎨 Design generated as preview (not saved)');
       } else {
         console.error('Invalid API response:', data);
         throw new Error('Invalid design recipe returned from API');
@@ -135,10 +177,51 @@ export function WebsiteBuilder({ weddingData, isGenerating = false, onRegenerate
     } catch (err) {
       console.error('Error generating design recipe:', err);
       setError('Failed to generate design. Using fallback.');
-      // Use fallback design
-      setDesignRecipe(createFallbackDesign());
+      // Use fallback design as preview
+      setPreviewDesign(createFallbackDesign());
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleSaveDesign = async () => {
+    if (!previewDesign) return;
+    
+    setIsSaving(true);
+    setSaveMessage(null);
+    
+    try {
+      // Save the preview design to the database
+      const response = await fetch('/api/wedding', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          weddingId: weddingData.id,
+          design: previewDesign
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to save design');
+      }
+
+      // Update the saved design and clear preview
+      setDesignRecipe(previewDesign);
+      setPreviewDesign(null);
+      setSaveMessage({ type: 'success', text: 'Design saved successfully!' });
+      
+      console.log('✅ Design saved to database');
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => setSaveMessage(null), 3000);
+    } catch (error) {
+      console.error('Failed to save design:', error);
+      setSaveMessage({ type: 'error', text: 'Failed to save design. Please try again.' });
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -155,7 +238,7 @@ export function WebsiteBuilder({ weddingData, isGenerating = false, onRegenerate
   }
 
   // Show error state
-  if (error && !designRecipe) {
+  if (error && !designRecipe && !previewDesign) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center max-w-md">
@@ -172,7 +255,19 @@ export function WebsiteBuilder({ weddingData, isGenerating = false, onRegenerate
   }
 
   // Don't render if no design recipe yet
-  if (!designRecipe) {
+  if (!designRecipe && !previewDesign) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <p className="text-lg text-gray-600">Loading your wedding website...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Use preview design if available, otherwise use saved design
+  const currentDesign = previewDesign || designRecipe;
+  if (!currentDesign) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
@@ -184,16 +279,16 @@ export function WebsiteBuilder({ weddingData, isGenerating = false, onRegenerate
 
   const renderSection = (sectionType: string, index: number) => {
     // Double-check designRecipe is valid before using it
-    if (!designRecipe?.palette || !designRecipe?.fonts || !designRecipe?.accent) {
+    if (!currentDesign?.palette || !currentDesign?.fonts || !currentDesign?.accent) {
       return null;
     }
 
     const commonProps = {
       partner1name: weddingData.partner1name,
       partner2name: weddingData.partner2name,
-      palette: designRecipe.palette,
-      fonts: designRecipe.fonts,
-      accentPreset: designRecipe.accent.preset
+      palette: currentDesign.palette,
+      fonts: currentDesign.fonts,
+      accentPreset: currentDesign.accent.preset
     };
 
     // Get section ID for navigation
@@ -219,7 +314,7 @@ export function WebsiteBuilder({ weddingData, isGenerating = false, onRegenerate
         }
         
         // Fallback to design recipe choice only when no photo
-        switch (designRecipe.hero.style) {
+        switch (currentDesign.hero.style) {
           case 'photo-overlay':
             return (
               <div key={`hero-${index}`} id={sectionId}>
@@ -313,38 +408,38 @@ export function WebsiteBuilder({ weddingData, isGenerating = false, onRegenerate
   return (
     <div 
       className={mode === 'preview' ? "min-h-screen flex justify-center p-4" : "min-h-screen"} 
-      style={{ backgroundColor: mode === 'preview' ? '#f5f5f5' : (designRecipe?.palette?.bg || '#ffffff') }}
+      style={{ backgroundColor: mode === 'preview' ? '#f5f5f5' : (currentDesign?.palette?.bg || '#ffffff') }}
     >
       {/* Website container - full width for fullsite mode, constrained for preview */}
       <div 
         className={mode === 'preview' ? "w-full max-w-[1200px] relative bg-white shadow-lg overflow-hidden" : "w-full relative overflow-hidden"}
         style={{ 
-          backgroundColor: designRecipe?.palette?.bg || '#ffffff',
+          backgroundColor: currentDesign?.palette?.bg || '#ffffff',
           minHeight: mode === 'preview' ? '90vh' : '100vh',
           borderRadius: mode === 'preview' ? '8px' : '0'
         }}
       >
         {/* Universal Navigation Toolbar - positioned relative to container */}
         <Navigation 
-          palette={designRecipe.palette}
-          fonts={designRecipe.fonts}
-          layout={designRecipe.layout}
+          palette={currentDesign.palette}
+          fonts={currentDesign.fonts}
+          layout={currentDesign.layout}
           partner1name={weddingData.partner1name}
           partner2name={weddingData.partner2name}
         />
 
         {/* Render sections based on layout */}
-        {designRecipe.layout?.map((sectionType, index) => {
+        {currentDesign.layout?.map((sectionType, index) => {
           const section = renderSection(sectionType, index);
           
           // Add dividers between sections (except for the last one)
-          if (section && index < designRecipe.layout.length - 1) {
+          if (section && index < currentDesign.layout.length - 1) {
             return (
               <React.Fragment key={`section-${index}`}>
                 {section}
                 <Divider 
-                  palette={designRecipe.palette}
-                  accentPreset={designRecipe.accent.preset}
+                  palette={currentDesign.palette}
+                  accentPreset={currentDesign.accent.preset}
                 />
               </React.Fragment>
             );
@@ -358,17 +453,27 @@ export function WebsiteBuilder({ weddingData, isGenerating = false, onRegenerate
           <p 
             className="text-sm opacity-60 hover:opacity-80 transition-opacity"
             style={{ 
-              color: designRecipe.palette.primary,
-              fontFamily: designRecipe.fonts.body 
+              color: currentDesign.palette.primary,
+              fontFamily: currentDesign.fonts.body 
             }}
           >
-            built with Wedly ❤️
+            built with{' '}
+            <a 
+              href="https://gowedly.com" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="hover:underline"
+              style={{ color: 'inherit', textDecoration: 'underline' }}
+            >
+              Wedly
+            </a>{' '}
+            ❤️
           </p>
         </div>
       </div>
 
-      {/* Floating Regenerate Design Button - Only show in preview mode */}
-      {onRegenerateDesign && mode === 'preview' && (
+      {/* Floating Design Action Buttons - Only show in preview mode */}
+      {mode === 'preview' && (
         <div 
           className="fixed z-50"
           style={{ 
@@ -377,106 +482,44 @@ export function WebsiteBuilder({ weddingData, isGenerating = false, onRegenerate
             position: 'fixed'
           }}
         >
-          <button
-            onClick={onRegenerateDesign}
-            className="px-4 py-3 bg-blue-500 text-white rounded-lg shadow-lg hover:bg-blue-600 transition-all duration-300 hover:scale-105 flex items-center gap-2 text-sm font-medium"
-            style={{ minWidth: '140px' }}
-          >
-            <span className="text-lg">🎨</span>
-            <span>Regenerate<br/>Design</span>
-          </button>
+          <div className="flex flex-col gap-3">
+            {/* Regenerate Button */}
+            {onRegenerateDesign && (
+              <button
+                onClick={onRegenerateDesign}
+                className="w-12 h-12 bg-blue-500 text-white rounded-full shadow-lg hover:bg-blue-600 transition-all duration-300 hover:scale-110 flex items-center justify-center text-lg"
+                title="Refresh design"
+              >
+                🔄
+              </button>
+            )}
+
+            {/* Save Button - only show when there's a preview */}
+            {hasUnsavedPreview && (
+              <button
+                onClick={handleSaveDesign}
+                disabled={isSaving}
+                className="w-12 h-12 bg-green-500 text-white rounded-full shadow-lg hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-all duration-300 hover:scale-110 flex items-center justify-center text-lg"
+                title="Save design"
+              >
+                {isSaving ? '⏳' : '💾'}
+              </button>
+            )}
+          </div>
+
+          {/* Save Message */}
+          {saveMessage && (
+            <div 
+              className={`mt-3 px-4 py-2 rounded-lg text-sm font-medium ${
+                saveMessage.type === 'success' 
+                  ? 'bg-green-100 text-green-800 border border-green-200' 
+                  : 'bg-red-100 text-red-800 border border-red-200'
+              }`}
+            >
+              {saveMessage.text}
+            </div>
+          )}
         </div>
-      )}
-
-      {/* Debug Info - Only show in preview mode and development */}
-      {process.env.NODE_ENV === 'development' && designRecipe && mode === 'preview' && (
-        <>
-          {/* Minimized Debug Icon */}
-          {!isDebugOpen && (
-            <div 
-              className="fixed z-50 cursor-pointer hover:scale-110 transition-transform"
-              style={{ 
-                bottom: '16px', 
-                right: '16px',
-                position: 'fixed',
-                backgroundColor: 'rgba(0, 0, 0, 0.9)',
-                color: 'white',
-                padding: '12px',
-                borderRadius: '50%',
-                fontSize: '16px',
-                backdropFilter: 'blur(4px)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                width: '48px',
-                height: '48px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-              onClick={() => setIsDebugOpen(true)}
-              title="Show debug info"
-            >
-              🎨
-            </div>
-          )}
-
-          {/* Expanded Debug Panel */}
-          {isDebugOpen && (
-            <div 
-              className="fixed z-50"
-              style={{ 
-                bottom: '16px', 
-                right: '16px',
-                position: 'fixed',
-                backgroundColor: 'rgba(0, 0, 0, 0.9)',
-                color: 'white',
-                padding: '12px',
-                borderRadius: '8px',
-                fontSize: '12px',
-                maxWidth: '320px',
-                backdropFilter: 'blur(4px)',
-                border: '1px solid rgba(255, 255, 255, 0.1)'
-              }}
-            >
-              {/* Header with close button */}
-              <div style={{ 
-                display: 'flex', 
-                justifyContent: 'space-between', 
-                alignItems: 'center',
-                marginBottom: '8px'
-              }}>
-                <div style={{ fontWeight: 'bold', color: '#4ade80' }}>
-                  Design Recipe:
-                </div>
-                <button
-                  onClick={() => setIsDebugOpen(false)}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: '#ffffff',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    padding: '2px 6px',
-                    borderRadius: '4px',
-                    opacity: 0.7,
-                    transition: 'opacity 0.2s'
-                  }}
-                  onMouseEnter={(e) => (e.target as HTMLButtonElement).style.opacity = '1'}
-                  onMouseLeave={(e) => (e.target as HTMLButtonElement).style.opacity = '0.7'}
-                  title="Minimize"
-                >
-                  ✕
-                </button>
-              </div>
-              
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <div><span style={{ color: '#93c5fd' }}>Hero:</span> {designRecipe.hero?.style}</div>
-                <div><span style={{ color: '#93c5fd' }}>Accent:</span> {designRecipe.accent?.preset}</div>
-                <div><span style={{ color: '#93c5fd' }}>Layout:</span> {designRecipe.layout?.join(' → ')}</div>
-                <div><span style={{ color: '#93c5fd' }}>Colors:</span> {designRecipe.palette?.primary}</div>
-              </div>
-            </div>
-          )}
-        </>
       )}
     </div>
   );

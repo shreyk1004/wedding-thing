@@ -12,6 +12,7 @@ interface WeddingData {
   photos: string[];
   theme: string;
   design?: any;
+  regenerateKey?: number;
 }
 
 function WebsitePreviewContent() {
@@ -61,42 +62,20 @@ function WebsitePreviewContent() {
   const handleRegenerateDesign = async () => {
     if (!weddingData) return;
     
-    console.log('🎨 Starting design regeneration for wedding:', weddingData.id);
+    console.log('🎨 Triggering design regeneration...');
     setIsRegenerating(true);
     
-    try {
-      // Generate a new design using the wedding ID
-      console.log('🔄 Calling design-recipe API...');
-      const response = await fetch('/api/design-recipe', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          weddingId: weddingData.id
-        }),
-      });
-
-      console.log('📡 Design API response status:', response.status);
-      
-      if (response.ok) {
-        const result = await response.json();
-        console.log('✅ Design regenerated successfully:', result);
-        
-        // Refetch wedding data to get the new design
-        console.log('🔄 Refetching wedding data...');
-        await fetchUserWeddingData();
-        console.log('✅ Wedding data refetched successfully');
-      } else {
-        const errorText = await response.text();
-        console.error('❌ Failed to regenerate design:', response.status, errorText);
-      }
-    } catch (err) {
-      console.error('❌ Error regenerating design:', err);
-    } finally {
+    // Force a re-render by updating the wedding data timestamp
+    // This will trigger WebsiteBuilder to regenerate the design
+    setWeddingData({
+      ...weddingData,
+      regenerateKey: Date.now() // Add a key to force regeneration
+    });
+    
+    // Reset the regenerating state after a short delay
+    setTimeout(() => {
       setIsRegenerating(false);
-      console.log('🏁 Regeneration process completed');
-    }
+    }, 1000);
   };
 
   if (error) {
