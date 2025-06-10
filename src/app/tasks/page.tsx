@@ -175,17 +175,6 @@ export default function TasksPage() {
 
   return (
     <div className="relative min-h-screen">
-      {/* Session Debug */}
-      {sessionDebug && (
-        <div className="fixed top-4 right-4 bg-black text-white p-3 rounded-lg text-xs max-w-sm z-50">
-          <div className="font-bold mb-1">🔍 Session Status</div>
-          <div>Client Session: {sessionDebug.hasSession ? '✅ YES' : '❌ NO'}</div>
-          <div>User: {sessionDebug.user || 'None'}</div>
-          <div>LocalStorage: {sessionDebug.hasLocalStorage ? '✅ YES' : '❌ NO'}</div>
-          {sessionDebug.error && <div className="text-red-300">Error: {sessionDebug.error}</div>}
-        </div>
-      )}
-      
       <div className="space-y-6">
         {loading && <div className="text-gray-500">Loading wedding details...</div>}
         
