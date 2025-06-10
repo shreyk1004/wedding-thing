@@ -13,6 +13,7 @@ export default function TasksPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [weddingDetails, setWeddingDetails] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [tasksLoading, setTasksLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sessionDebug, setSessionDebug] = useState<any>(null);
   const { openChat } = useChatContext();
@@ -46,22 +47,35 @@ export default function TasksPage() {
 
   useEffect(() => {
     async function fetchTasks() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        console.log("No user, not fetching tasks");
-        return;
-      }
+      try {
+        setTasksLoading(true);
+        console.log('🔄 Starting to fetch tasks...');
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          console.log("❌ No user, not fetching tasks");
+          setTasks([]);
+          return;
+        }
 
-      const { data, error } = await supabase
-        .from('tasks')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+        console.log('👤 User found:', user.email, 'fetching tasks...');
+        const { data, error } = await supabase
+          .from('tasks')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Error fetching tasks:', error);
-      } else {
-        setTasks(data || []);
+        if (error) {
+          console.error('❌ Error fetching tasks:', error);
+          setTasks([]);
+        } else {
+          console.log('✅ Tasks fetched successfully:', data?.length || 0, 'tasks');
+          setTasks(data || []);
+        }
+      } catch (err) {
+        console.error('❌ Exception in fetchTasks:', err);
+        setTasks([]);
+      } finally {
+        setTasksLoading(false);
       }
     }
 
@@ -238,30 +252,46 @@ export default function TasksPage() {
               <div className="lg:col-span-2 space-y-6">
                 <div className="p-4 bg-white rounded-xl shadow-sm border border-gray-200">
                   <h3 className="text-lg font-semibold text-[#181511] mb-4">Your Tasks</h3>
-                  <TaskList
-                    tasks={tasks}
-                    onTaskToggle={handleTaskToggle}
-                    onDelete={handleDeleteTask}
-                    onAIHelp={handleAIHelp}
-                  />
+                  {tasksLoading ? (
+                    <div className="text-gray-500 text-center py-8">Loading tasks...</div>
+                  ) : tasks.length === 0 ? (
+                    <div className="text-gray-500 text-center py-8">
+                      <p>No tasks yet. Add your first wedding planning task!</p>
+                      <p className="text-sm text-gray-400 mt-2">Debug: Found {tasks.length} tasks</p>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="text-xs text-gray-400 mb-2">Debug: Showing {tasks.length} tasks</div>
+                      <TaskList
+                        tasks={tasks}
+                        onTaskToggle={handleTaskToggle}
+                        onDelete={handleDeleteTask}
+                        onAIHelp={handleAIHelp}
+                      />
+                    </>
+                  )}
                 </div>
               </div>
               <div className="lg:col-span-1 space-y-6">
-                <AddTaskForm addTask={async (formData: FormData) => {
-                  await addTask(formData);
-                  // Manually re-fetch tasks after adding a new one
-                  const { data: { user } } = await supabase.auth.getUser();
-                  if (!user) return;
-                  const { data, error } = await supabase
-                    .from('tasks')
-                    .select('*')
-                    .eq('user_id', user.id)
-                    .order('created_at', { ascending: false });
+                <AddTaskForm 
+                  addTask={async (formData: FormData) => {
+                    await addTask(formData);
+                    // Manually re-fetch tasks after adding a new one
+                    const { data: { user } } = await supabase.auth.getUser();
+                    if (!user) return;
+                    const { data, error } = await supabase
+                      .from('tasks')
+                      .select('*')
+                      .eq('user_id', user.id)
+                      .order('created_at', { ascending: false });
 
-                  if (!error && data) {
-                    setTasks(data);
-                  }
-                }} />
+                    if (!error && data) {
+                      setTasks(data);
+                    }
+                  }}
+                  existingTasks={tasks}
+                  weddingDetails={weddingDetails}
+                />
                 <div className="p-4 bg-white rounded-xl shadow-sm border border-gray-200">
                   <div className="flex justify-between items-center mb-4">
                     <h3 className="text-lg font-semibold text-[#181511]">Wedding Details</h3>
