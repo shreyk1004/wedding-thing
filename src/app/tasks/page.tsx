@@ -257,18 +257,14 @@ export default function TasksPage() {
                   ) : tasks.length === 0 ? (
                     <div className="text-gray-500 text-center py-8">
                       <p>No tasks yet. Add your first wedding planning task!</p>
-                      <p className="text-sm text-gray-400 mt-2">Debug: Found {tasks.length} tasks</p>
                     </div>
                   ) : (
-                    <>
-                      <div className="text-xs text-gray-400 mb-2">Debug: Showing {tasks.length} tasks</div>
-                      <TaskList
-                        tasks={tasks}
-                        onTaskToggle={handleTaskToggle}
-                        onDelete={handleDeleteTask}
-                        onAIHelp={handleAIHelp}
-                      />
-                    </>
+                    <TaskList
+                      tasks={tasks}
+                      onTaskToggle={handleTaskToggle}
+                      onDelete={handleDeleteTask}
+                      onAIHelp={handleAIHelp}
+                    />
                   )}
                 </div>
               </div>
