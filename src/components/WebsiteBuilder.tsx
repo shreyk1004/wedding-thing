@@ -71,9 +71,30 @@ export function WebsiteBuilder({ weddingData, isGenerating = false, onRegenerate
   const [previewDesign, setPreviewDesign] = useState<DesignRecipe | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [saveMessageOpacity, setSaveMessageOpacity] = useState(1);
   
   // Check if there's an unsaved preview design
   const hasUnsavedPreview = previewDesign !== null;
+
+  // Auto-fade save message
+  useEffect(() => {
+    if (saveMessage) {
+      setSaveMessageOpacity(1); // Ensure it starts visible
+      const timer = setTimeout(() => {
+        // Use requestAnimationFrame to ensure the opacity change happens in the next frame
+        requestAnimationFrame(() => {
+          setSaveMessageOpacity(0); // Start fade out
+          // Remove the message after fade completes
+          setTimeout(() => {
+            setSaveMessage(null);
+            setSaveMessageOpacity(1); // Reset for next message
+          }, 500); // Wait for transition duration
+        });
+      }, 3000); // Start fade after 3 seconds
+      
+      return () => clearTimeout(timer);
+    }
+  }, [saveMessage]);
 
   const createFallbackDesign = (): DesignRecipe => {
     return {
@@ -506,19 +527,38 @@ export function WebsiteBuilder({ weddingData, isGenerating = false, onRegenerate
               </button>
             )}
           </div>
+        </div>
+      )}
 
-          {/* Save Message */}
-          {saveMessage && (
-            <div 
-              className={`mt-3 px-4 py-2 rounded-lg text-sm font-medium ${
-                saveMessage.type === 'success' 
-                  ? 'bg-green-100 text-green-800 border border-green-200' 
-                  : 'bg-red-100 text-red-800 border border-red-200'
-              }`}
-            >
-              {saveMessage.text}
+      {/* Save Message - Completely separate container */}
+      {mode === 'preview' && saveMessage && (
+        <div 
+          className="fixed z-50"
+          style={{ 
+            top: '140px', 
+            right: '24px',
+            position: 'fixed'
+          }}
+        >
+          <div 
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-opacity duration-500 shadow-lg max-w-xs ${
+              saveMessage.type === 'success' 
+                ? 'bg-green-100 text-green-800 border border-green-200' 
+                : 'bg-red-100 text-red-800 border border-red-200'
+            }`}
+            style={{ opacity: saveMessageOpacity }}
+          >
+            <div className="flex items-start justify-between">
+              <span className="flex-1">{saveMessage.text}</span>
+              <button
+                onClick={() => setSaveMessage(null)}
+                className="ml-2 text-gray-400 hover:text-gray-600 transition-colors"
+                aria-label="Close message"
+              >
+                ✕
+              </button>
             </div>
-          )}
+          </div>
         </div>
       )}
     </div>
