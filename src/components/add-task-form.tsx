@@ -93,6 +93,10 @@ export function AddTaskForm({ addTask, existingTasks = [], weddingDetails }: Add
       // Auto-fill the description
       if (data.suggestion.description) {
         setDescription(data.suggestion.description);
+        // Update suggestions state to show the feedback
+        setSuggestions({
+          description: data.suggestion.description
+        });
       }
 
     } catch (err) {
