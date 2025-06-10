@@ -108,9 +108,9 @@ export default function SetupPasswordPage() {
             if (tasks && Array.isArray(tasks) && tasks.length > 0) {
               console.log(`Attempting to save ${tasks.length} tasks...`);
               const tasksToInsert = tasks.map((task: any) => ({
-                ...task,
+                title: task.title,
+                description: task.description || '',
                 user_id: data.user.id,
-                wedding_id: wedding.id, // Link tasks to the wedding record
                 status: 'todo',
               }));
 

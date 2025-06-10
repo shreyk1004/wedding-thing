@@ -93,7 +93,8 @@ export async function POST(request: NextRequest) {
     // If there are tasks, insert them
     if (tasks && tasks.length > 0) {
       const tasksToInsert = tasks.map((task: any) => ({
-        ...task,
+        title: task.title,
+        description: task.description || '',
         user_id: user.id,
         status: 'todo',
       }));
