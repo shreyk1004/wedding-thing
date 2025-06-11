@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
+import { getSupabaseClient } from '@/lib/supabase';
 import { WebsiteBuilder } from '@/components/WebsiteBuilder';
 
 type SitePageProps = {
@@ -14,8 +14,11 @@ export const revalidate = 300;
 export default async function SitePage({ params }: SitePageProps) {
   const { subdomain } = await params;
 
+  // Use admin client for server-side operations with RLS
+  const supabaseAdmin = getSupabaseClient(true);
+  
   // Fetch wedding data for this subdomain
-  const { data: weddingData, error } = await supabase
+  const { data: weddingData, error } = await supabaseAdmin
     .from('weddings')
     .select('*')
     .eq('subdomain', subdomain)
@@ -41,7 +44,10 @@ export default async function SitePage({ params }: SitePageProps) {
 export async function generateMetadata({ params }: SitePageProps) {
   const { subdomain } = await params;
   
-  const { data: weddingData } = await supabase
+  // Use admin client for server-side operations with RLS
+  const supabaseAdmin = getSupabaseClient(true);
+  
+  const { data: weddingData } = await supabaseAdmin
     .from('weddings')
     .select('partner1name, partner2name, weddingdate')
     .eq('subdomain', subdomain)
