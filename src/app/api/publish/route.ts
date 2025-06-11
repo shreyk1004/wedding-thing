@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { getSupabaseClient } from '@/lib/supabase';
 
 export async function POST(req: NextRequest) {
   try {
@@ -14,8 +14,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid subdomain format. Use only letters, numbers, and hyphens.' }, { status: 400 });
     }
 
+    // Use admin client for server-side operations with RLS
+    const supabaseAdmin = getSupabaseClient(true);
+
     // Check if subdomain is already taken
-    const { data: existingWedding } = await supabase
+    const { data: existingWedding } = await supabaseAdmin
       .from('weddings')
       .select('id')
       .eq('subdomain', subdomain)
@@ -26,7 +29,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Get wedding data to verify it exists
-    const { data: wedding, error: weddingError } = await supabase
+    const { data: wedding, error: weddingError } = await supabaseAdmin
       .from('weddings')
       .select('id, partner1name, partner2name')
       .eq('id', weddingId)
@@ -80,7 +83,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Update database with subdomain
-    const { error: updateError } = await supabase
+    const { error: updateError } = await supabaseAdmin
       .from('weddings')
       .update({ subdomain })
       .eq('id', weddingId);
